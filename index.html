@@ -731,8 +731,7 @@ tr.multi-selected-row td {
 
 /* 彈出色盤容器 */
 .color-popup {
-  position: absolute;
-  top: 100%; left: 0;
+  position: fixed;
   margin-top: 4px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -741,7 +740,7 @@ tr.multi-selected-row td {
   display: none;
   flex-direction: column;
   gap: 0;
-  z-index: 500;
+  z-index: 9000;
   box-shadow: var(--shadow-md);
   min-width: 110px;
 }
@@ -1523,7 +1522,17 @@ function toggleColorPopup(uid, idx) {
   if (!target) return;
   const isOpen = target.classList.contains('open');
   closeAllColorPopups();
-  if (!isOpen) target.classList.add('open');
+  if (!isOpen) {
+    target.classList.add('open');
+    // position:fixed 需手動對齊觸發按鈕
+    const btn = target.querySelector('.color-swatch-btn');
+    const popup = target.querySelector('.color-popup');
+    if (btn && popup) {
+      const rect = btn.getBoundingClientRect();
+      popup.style.top  = (rect.bottom + 4) + 'px';
+      popup.style.left = rect.left + 'px';
+    }
+  }
 }
 
 /* 關閉所有選色 popup，並收合 HSL 面板 */
@@ -4287,7 +4296,7 @@ function renderTable() {
         tdSpec.appendChild(heightWrap);
       } else if (mod.id === 'P3N-BPANEL') {
         // P3N-BPANEL：每片面板獨立高度輸入 + 增減面板按鈕
-        tdSpec.style.cssText = 'vertical-align:top; padding: 4px 8px; overflow:hidden; min-width:0;';
+        tdSpec.style.cssText = 'vertical-align:top; padding: 4px 8px; min-width:0;';
 
         // 重繪所有面板輸入列的函式（＋／－ 按鈕點擊後呼叫）
         // 注入 drop 高亮動畫（只注入一次）
@@ -4408,7 +4417,7 @@ function renderTable() {
 
           // ── panelBody：收合/展開區域 ──
           const panelBody = document.createElement('div');
-          panelBody.style.cssText = mod._panelExpanded ? 'display:block;' : 'display:none;';
+          panelBody.style.cssText = mod._panelExpanded ? 'display:block;min-width:0;overflow:hidden;' : 'display:none;';
 
           // ── 拖曳排序狀態 ──
           let dragSrcIdx = null;
@@ -4423,6 +4432,7 @@ function renderTable() {
               border:1px solid var(--border);border-radius:6px;
               background:var(--surface-2);
               transition:opacity 0.15s;
+              min-width:0;overflow:hidden;
             `;
 
             // dragover：顯示插入線（上／下方 border highlight）
@@ -4477,7 +4487,7 @@ function renderTable() {
 
             // ── 第一列：面板標籤 + H 輸入 + 刪除按鈕 ──
             const rowWrap = document.createElement('div');
-            rowWrap.style.cssText = 'display:flex;align-items:center;gap:4px;';
+            rowWrap.style.cssText = 'display:flex;align-items:center;gap:4px;flex-wrap:wrap;min-width:0;';
 
             // ── 拖曳手柄 ──
             const dragHandle = document.createElement('span');
@@ -4529,12 +4539,13 @@ function renderTable() {
             const deduct = isLast ? 41 : 15;
             inp.value = panel.h + deduct;
             inp.style.cssText = `
-              width:60px;padding:2px 5px;
+              width:60px;min-width:0;padding:2px 5px;
               border:1px solid var(--border);border-radius:5px;
               font-size:12px;font-family:inherit;
               text-align:center;color:var(--accent);
               font-weight:600;background:var(--accent-light);
               outline:none;transition:border-color 0.15s;
+              box-sizing:border-box;
             `;
             if (isLast) {
               // 建立 inline tooltip，跟著 inp 走
@@ -4669,7 +4680,7 @@ function renderTable() {
 
             // ── 第二列：面板選項下拉 ──
             const matRow = document.createElement('div');
-            matRow.style.cssText = 'display:flex;align-items:center;gap:5px;margin-top:3px;';
+            matRow.style.cssText = 'display:flex;align-items:center;gap:5px;margin-top:3px;min-width:0;';
             const matLblEl = document.createElement('span');
             matLblEl.style.cssText = 'font-size:11px;color:var(--text-secondary);white-space:nowrap;flex-shrink:0;';
             matLblEl.textContent = '面板選項';

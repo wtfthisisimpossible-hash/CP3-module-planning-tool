@@ -573,10 +573,7 @@ tr.multi-selected-row td {
 }
 .toast.show { transform: translateX(-50%) translateY(0); }
 .panel-tip {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  transform: none;
+  position: fixed;
   background: rgba(0,0,0,0.82);
   color: #fff;
   padding: 7px 12px;
@@ -589,14 +586,21 @@ tr.multi-selected-row td {
   z-index: 9999;
   opacity: 0;
   transition: opacity 0.15s;
+  max-width: 220px;
 }
 .panel-tip::before {
   content: '';
   position: absolute;
-  bottom: 100%;
   left: 14px;
   border: 5px solid transparent;
+}
+.panel-tip.tip-below::before {
+  bottom: 100%;
   border-bottom-color: rgba(0,0,0,0.82);
+}
+.panel-tip.tip-above::before {
+  top: 100%;
+  border-top-color: rgba(0,0,0,0.82);
 }
 .panel-tip.visible { opacity: 1; }
 @media (max-width: 900px) {
@@ -4555,13 +4559,26 @@ function renderTable() {
               // inp 的父容器需要 position:relative 才能讓 tooltip 定位
               inp.style.position = 'relative'; // inp 本身不行，改包一層
               // 實際做法：把 tip 放進 inp 的 parentNode，並讓 parentNode position:relative
+              // 將 tip 掛在 body，用 fixed 定位避免被 overflow 截掉
+              document.body.appendChild(_tip);
               const _showTip = () => {
-                const _parent = inp.parentNode;
-                if (_parent && !_parent.querySelector('.panel-tip')) {
-                  _parent.style.position = 'relative';
-                  _parent.appendChild(_tip);
+                const rect = inp.getBoundingClientRect();
+                const tipH = 70; // 預估 tip 高度
+                const spaceBelow = window.innerHeight - rect.bottom;
+                if (spaceBelow >= tipH + 10) {
+                  // 下方空間足夠
+                  _tip.style.top  = (rect.bottom + 6) + 'px';
+                  _tip.style.left = rect.left + 'px';
+                  _tip.classList.remove('tip-above');
+                  _tip.classList.add('tip-below');
+                } else {
+                  // 顯示在上方
+                  _tip.style.top  = (rect.top - tipH - 6) + 'px';
+                  _tip.style.left = rect.left + 'px';
+                  _tip.classList.remove('tip-below');
+                  _tip.classList.add('tip-above');
                 }
-                requestAnimationFrame(() => _tip.classList.add('visible'));
+                _tip.classList.add('visible');
               };
               const _hideTip = () => _tip.classList.remove('visible');
               inp.addEventListener('mouseenter', _showTip);

@@ -1,0 +1,5460 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CP3屏風配置工具</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+:root {
+  --bg:           #F2F0EE;
+  --surface:      #FFFFFF;
+  --surface-2:    #F7F6F4;
+  --border:       #E4E1DC;
+  --border-strong:#C9C5BE;
+  --accent:       #D4613A;
+  --accent-hover: #BF5330;
+  --accent-light: #FAF0EC;
+  --text-primary: #1C1A18;
+  --text-secondary:#6B6860;
+  --text-muted:   #A09D99;
+  --shadow-sm:    0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md:    0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  --radius-sm:    8px;
+  --radius-md:    12px;
+  --radius-lg:    16px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Inter", "Microsoft JhengHei", "PingFang TC", sans-serif; font-size: 14px; color: var(--text-primary); background: var(--bg); }
+
+.app { display: flex; height: 100vh; border: none; overflow: hidden; gap: 12px; padding: 12px; background: var(--bg); }
+
+/* ── 任務一：響應式基礎斷點 ── */
+@media (max-width: 900px) {
+  .app {
+    flex-direction: column;
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+}
+
+.panel {
+  width: 258px; min-width: 258px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 14px;
+  display: flex; flex-direction: column; gap: 14px;
+  overflow-y: auto;
+  box-shadow: var(--shadow-sm);
+}
+.panel-title {
+  font-size: 15px; font-weight: 700; letter-spacing: -0.01em;
+  padding-bottom: 12px;
+  border-bottom: 1.5px solid var(--border);
+  color: var(--text-primary);
+}
+.section-title {
+  font-size: 10.5px; font-weight: 600;
+  color: var(--text-muted); letter-spacing: 0.06em; text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.section { display: flex; flex-direction: column; gap: 6px; }
+
+/* ── 插入模塊收合群組 ── */
+.insert-group {
+  display: flex; flex-direction: column; gap: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: visible;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.insert-group-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 12px;
+  background: var(--surface-2);
+  cursor: pointer;
+  user-select: none;
+  font-size: 12.5px; font-weight: 600; color: var(--text-primary);
+  border-bottom: 1px solid var(--border);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  transition: background 0.15s;
+}
+.insert-group-header:hover { background: var(--bg); }
+.insert-group-header .ig-arrow {
+  font-size: 10px; color: var(--text-muted);
+  transition: transform 0.2s;
+  display: inline-block;
+}
+.insert-group.open .insert-group-header .ig-arrow { transform: rotate(180deg); }
+.insert-group-body {
+  display: none;
+  flex-direction: column;
+  gap: 0;
+}
+.insert-group.open .insert-group-body { display: flex; }
+.insert-tab-bar {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.insert-tab {
+  flex: 1;
+  padding: 7px 2px;
+  text-align: center;
+  font-size: 11px; font-weight: 600; color: var(--text-secondary);
+  cursor: pointer;
+  border-right: 1px solid var(--border);
+  transition: background 0.1s, color 0.1s;
+  user-select: none;
+  white-space: nowrap;
+}
+.insert-tab:last-child { border-right: none; }
+.insert-tab:hover { background: var(--accent-light); color: var(--accent); }
+.insert-tab.active {
+  background: var(--surface); color: var(--accent);
+  border-bottom: 2px solid var(--accent);
+  margin-bottom: -1px;
+  font-weight: 700;
+}
+.insert-panel {
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+}
+.insert-panel.active { display: flex; }
+
+/* 客製化下拉選單樣式 */
+.custom-select {
+  position: relative;
+  width: 100%;
+}
+.custom-select-trigger {
+  width: 100%;
+  padding: 7px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s;
+}
+.custom-select-trigger:hover { border-color: var(--accent); }
+.custom-select-trigger::after {
+  content: '▼';
+  font-size: 9px;
+  color: var(--text-secondary);
+  transition: transform 0.15s ease;
+}
+.custom-select.open .custom-select-trigger::after {
+  transform: rotate(180deg);
+}
+.custom-select-options {
+  position: fixed;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-top: 4px;
+  max-height: 260px;
+  overflow-y: auto;
+  z-index: 9999;
+  display: none;
+  box-shadow: var(--shadow-md);
+}
+.custom-select.open .custom-select-options {
+  display: block;
+}
+.custom-option {
+  padding: 6px 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: background 0.1s ease;
+}
+.custom-option:hover {
+  background: var(--accent-light);
+}
+.custom-option.selected {
+  background: var(--accent-light);
+  font-weight: 600;
+  color: var(--accent);
+}
+.custom-option-icon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  background: #fcfcfc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.custom-option-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.custom-option-name {
+  font-size: 12px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Trigger 內的預覽內容 */
+.trigger-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.trigger-icon {
+  width: 24px;
+  height: 24px;
+  border: 1px solid #ccc;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.trigger-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.btn {
+  padding: 7px 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 13px; font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s ease;
+  box-shadow: var(--shadow-sm);
+  font-family: inherit;
+}
+.btn:hover { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+.btn:active { transform: scale(0.97); }
+.btn-row { display: flex; gap: 6px; }
+.btn-row .btn { flex: 1; }
+.btn-danger:hover { border-color: #c0392b; background: #fdf0ee; color: #c0392b; }
+.btn-primary {
+  background: var(--accent); color: #fff; border-color: var(--accent);
+}
+.btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: #fff; }
+
+.divider { border: none; border-top: 1px solid var(--border); }
+.hint { font-size: 11px; color: var(--text-muted); line-height: 1.6; }
+
+.canvas-area { flex: 1; display: flex; flex-direction: column; min-width: 0; gap: 10px; }
+
+.canvas-header {
+  padding: 10px 16px;
+  font-size: 13px; font-weight: 600;
+  color: var(--text-primary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+}
+
+/*畫布網格改變*/
+.canvas {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background-color: var(--surface);
+  background-image:
+    radial-gradient(circle, #C8C4BF 1.8px, transparent 1.8px),
+    radial-gradient(circle, #E0DDD9 1.2px, transparent 1.2px);
+  background-size:
+    calc(100px * var(--zoom, 1)) calc(100px * var(--zoom, 1)),
+    calc(20px  * var(--zoom, 1)) calc(20px  * var(--zoom, 1));
+  background-position: 0 0, 0 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  touch-action: none;
+}
+
+/* ── 任務三：畫布區高度自適應 ── */
+@media (max-width: 900px) {
+  .canvas-area {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+  }
+  .canvas-header {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding-left: 125px;
+  }
+  .canvas {
+    height: 50dvh;
+    flex: none;
+  }
+  .canvas-title {
+    display: none;
+  }
+}
+
+/* ── 圖示按鈕響應式切換 ── */
+/* ── 畫布右上角浮動 zoom 控制區 ── */
+.canvas-zoom-overlay {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 5px 8px;
+  box-shadow: var(--shadow-md);
+  pointer-events: auto;
+}
+
+.btn-icon-only { display: none; }
+
+@media (max-width: 540px) {
+  .btn-icon-responsive .btn-label-text { display: none; }
+  .btn-icon-responsive .btn-icon-only  { display: inline-flex; align-items: center; justify-content: center; }
+  .btn-icon-responsive {
+    padding: 4px 6px !important;
+    min-width: 32px;
+    overflow: hidden;
+    line-height: 1;
+  }
+  .canvas-header {
+    overflow: hidden;
+    box-sizing: border-box;
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+  .canvas-header > div {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 4px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .canvas-header > div > div {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 4px;
+    align-items: center;
+  }
+  .canvas-zoom-overlay {
+    top: 8px;
+    right: 8px;
+    padding: 4px 6px;
+    gap: 3px;
+  }
+}
+
+/* 多選模式啟用時按鈕高亮 */
+.btn.multiselect-active {
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+  background: var(--accent-light);
+  background: #fff8f3;
+}
+
+.empty-hint {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: #aaa; font-size: 13px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* 清單外層包裝：header 固定，table 區域獨立捲動 */
+.list-area-wrap {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  min-height: 300px;
+  max-height: 400px;
+}
+.list-area {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: auto;
+  min-height: 0;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--surface);
+}
+
+.list-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  flex-shrink: 0;
+}
+.list-header span { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+
+table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; word-break: break-word; }
+col.col-name   { width: 12%; }
+col.col-id     { width: 13%; }
+col.col-spec   { width: 22%; }
+col.col-qty    { width: 6%; }
+col.col-edge   { width: 14%; }
+col.col-note   { width: 33%; }
+
+/* ── 任務四：配置清單自適應 ── */
+@media (max-width: 900px) {
+  .list-area-wrap {
+    min-height: unset;
+    max-height: 35dvh;
+  }
+  .list-area > table {
+    min-width: 600px;
+  }
+}
+
+th {
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 7px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+tr:hover td { background: var(--accent-light); }
+td:not(:last-child), th:not(:last-child) { border-right: 1px solid var(--border); }
+
+/* 側收邊 checkbox 欄 */
+.edge-cell { vertical-align: middle; }
+.edge-cell label {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 11px; color: var(--text-secondary);
+  cursor: pointer; user-select: none;
+  white-space: nowrap; margin-bottom: 4px;
+}
+.edge-cell label:last-child { margin-bottom: 0; }
+.edge-cell input[type="checkbox"] {
+  width: 13px; height: 13px;
+  accent-color: var(--accent); cursor: pointer; flex-shrink: 0;
+}
+.edge-cell.edge-na { color: var(--text-muted); font-size: 11px; text-align: center; }
+
+.note-cell textarea {
+  width: 100%; min-height: 30px;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--surface); color: var(--text-primary);
+  font-size: 12px; line-height: 1.4; font-family: inherit;
+  padding: 4px 8px; resize: vertical;
+  outline: none; transition: border-color 0.15s;
+}
+.note-cell textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(212,97,58,0.15); }
+
+
+/* 模塊元件 */
+.product-module {
+  position: absolute;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  box-sizing: border-box;
+}
+.product-module img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+  object-fit: fill;
+}
+.product-module.selected::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border: 2.5px solid var(--accent);
+  border-radius: 4px;
+  pointer-events: none;
+  box-shadow: 0 0 0 1px #fff, 0 4px 10px rgba(212,97,58,0.3);
+  z-index: 10;
+}
+.product-module:active { cursor: grabbing; }
+
+/* 框選矩形樣式 */
+#selection-rect {
+  position: absolute;
+  border: 2px dashed var(--accent);
+  background: rgba(212, 97, 58, 0.08);
+  pointer-events: none;
+  display: none;
+  z-index: 50;
+  box-sizing: border-box;
+}
+
+/* 畫布縮放容器：只有模塊在此層，框選/提示不受縮放影響 */
+#canvas-viewport {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  transform-origin: top left;
+}
+
+/* 多選高亮：覆蓋單選樣式 */
+.product-module.multi-selected::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border: 2.5px solid #e67e22;
+  border-radius: 4px;
+  pointer-events: none;
+  box-shadow: 0 0 0 1px #fff, 0 4px 10px rgba(230,126,34,0.3);
+  z-index: 10;
+}
+
+/* 配置清單多選高亮行 */
+tr.multi-selected-row td {
+  background: var(--accent-light) !important;
+}
+
+
+/* 吐司通知樣式 */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 13px;
+  z-index: 9999;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  pointer-events: none;
+  white-space: pre-line;
+  text-align: center;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+.panel-tip {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  transform: none;
+  background: rgba(0,0,0,0.82);
+  color: #fff;
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  white-space: pre-line;
+  text-align: left;
+  line-height: 1.55;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.panel-tip::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 14px;
+  border: 5px solid transparent;
+  border-bottom-color: rgba(0,0,0,0.82);
+}
+.panel-tip.visible { opacity: 1; }
+@media (max-width: 900px) {
+  .toast { bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* ── 任務二：Panel 收合抽屜化 ── */
+#panel-toggle {
+  display: none;
+}
+@media (max-width: 900px) {
+  #panel-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 300;
+    padding: 7px 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--border-strong);
+    border-radius: 5px;
+    font-size: 13px;
+    font-family: "Inter", "Microsoft JhengHei", "PingFang TC", sans-serif;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  .panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 280px;
+    max-width: 85vw;
+    height: 100dvh;
+    z-index: 250;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 4px 0 16px rgba(0,0,0,0.18);
+    border-right: 1px solid var(--border);
+    padding-top: 52px;
+  }
+  .panel.panel-open {
+    transform: translateX(0);
+  }
+  #panel-close {
+    display: flex;
+  }
+}
+#panel-close {
+  display: none;
+  align-items: center;
+  justify-content: flex-end;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 4px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--surface);
+  font-size: 12px;
+  font-family: "Inter", "Microsoft JhengHei", "PingFang TC", sans-serif;
+  cursor: pointer;
+}
+#panel-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 200;
+}
+#panel-overlay.overlay-show {
+  display: block;
+}
+
+/* ── 任務五：細節調整 ── */
+@media (max-width: 900px) {
+  body { font-size: 13px; }
+  .btn { padding: 6px 10px; font-size: 12px; }
+  .panel-title { font-size: 14px; }
+  .section-title { font-size: 10px; }
+  .hint { font-size: 10px; }
+  .custom-select-options { max-height: 45dvh; z-index: 300; }
+  .list-header .btn { padding: 3px 8px; font-size: 11px; }
+  table { font-size: 11px; }
+  th { padding: 5px 6px; }
+  td { padding: 4px 6px; }
+  .note-cell textarea { font-size: 11px; min-height: 26px; }
+}
+
+/* ── 面板拖曳手柄 ── */
+.panel-drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  flex-shrink: 0;
+  cursor: grab;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1;
+  letter-spacing: -1px;
+  user-select: none;
+  border-radius: 3px;
+  transition: color 0.15s, background 0.15s;
+  margin-right: 2px;
+  padding: 2px 1px;
+}
+.panel-drag-handle:hover {
+  color: var(--accent);
+  background: var(--accent-light);
+}
+.panel-drag-handle:active {
+  cursor: grabbing;
+}
+
+/* ── 面板顏色選擇器（移植自 AGORA 工具）── */
+
+/* 觸發按鈕：顯示目前色的小方塊 */
+.color-select { position: relative; display: inline-block; flex-shrink: 0; }
+.color-swatch-btn {
+  width: 22px; height: 22px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 5px;
+  cursor: pointer;
+  padding: 0;
+  display: block;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s;
+}
+.color-swatch-btn:hover { border-color: var(--accent); }
+
+/* 彈出色盤容器 */
+.color-popup {
+  position: absolute;
+  top: 100%; left: 0;
+  margin-top: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 8px;
+  display: none;
+  flex-direction: column;
+  gap: 0;
+  z-index: 500;
+  box-shadow: var(--shadow-md);
+  min-width: 110px;
+}
+.color-select.open .color-popup { display: flex; }
+
+/* 色票格 */
+.color-swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+  margin-bottom: 0;
+}
+.color-swatch-option {
+  width: 20px; height: 20px;
+  border-radius: 3px;
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  padding: 0;
+}
+.color-swatch-option:hover { border-color: var(--accent); }
+.color-swatch-option.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(212,97,58,0.2);
+}
+
+/* HSL 展開按鈕 */
+.hsl-toggle-btn {
+  width: 100%;
+  margin-top: 5px;
+  padding: 4px 0;
+  font-size: 11px;
+  font-family: inherit;
+  color: var(--text-secondary);
+  background: var(--surface-2);
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: center;
+  user-select: none;
+  transition: background 0.12s, color 0.12s;
+}
+.hsl-toggle-btn:hover { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
+
+/* HSL 面板 */
+.hsl-picker-panel {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 5px;
+  padding: 7px 5px 5px;
+  background: var(--surface-2);
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+.hsl-picker-panel.open { display: flex; }
+
+/* HSL 每列（標籤 + 滑桿 + 數值框）*/
+.hsl-row { display: flex; align-items: center; gap: 5px; }
+.hsl-label {
+  font-size: 10px; font-weight: bold;
+  color: var(--text-muted);
+  width: 14px; flex-shrink: 0; text-align: center;
+}
+.hsl-slider {
+  -webkit-appearance: none; appearance: none;
+  flex: 1; height: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  outline: none; cursor: pointer; padding: 0;
+}
+.hsl-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  cursor: pointer;
+}
+.hsl-slider::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  cursor: pointer;
+}
+.hsl-num {
+  width: 38px; font-size: 10px; font-family: inherit;
+  border: 1px solid var(--border); border-radius: 3px;
+  padding: 2px 3px; text-align: right;
+  background: var(--surface); color: var(--text-primary);
+  flex-shrink: 0;
+}
+.hsl-num:focus { outline: none; border-color: var(--accent); }
+
+/* HSL 預覽列（色塊 + hsl 文字 + 套用按鈕）*/
+.hsl-preview-row { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+.hsl-preview-swatch {
+  width: 28px; height: 28px; border-radius: 4px;
+  border: 1px solid var(--border-strong); flex-shrink: 0;
+}
+.hsl-value-label {
+  font-size: 10px; color: var(--text-secondary);
+  flex: 1; font-family: monospace;
+}
+.hsl-apply-btn {
+  padding: 3px 8px; font-size: 11px; font-family: inherit;
+  background: var(--accent); color: #fff;
+  border: none; border-radius: 4px;
+  cursor: pointer; flex-shrink: 0;
+}
+.hsl-apply-btn:hover { background: var(--accent-hover); }
+
+/* 吸管按鈕 */
+.hsl-eyedropper-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  background: var(--text-primary); color: #fff;
+  border: none; border-radius: 4px;
+  cursor: pointer; flex-shrink: 0; padding: 0;
+  transition: background 0.12s;
+}
+.hsl-eyedropper-btn:hover:not(:disabled) { background: var(--accent); }
+.hsl-eyedropper-btn:disabled { background: #bbb; cursor: not-allowed; opacity: 0.6; }
+.hsl-eyedropper-btn .material-icons { font-size: 18px; line-height: 1; user-select: none; }
+</style>
+</head>
+<body>
+
+<!-- 遮罩層（小螢幕 panel 展開時顯示） -->
+<div id="panel-overlay" onclick="closePanelDrawer()"></div>
+
+<!-- 漢堡按鈕（小螢幕專用） -->
+<button id="panel-toggle" onclick="openPanelDrawer()">☰ 模塊選單</button>
+
+<div class="app">
+  <div class="panel" id="panel">
+    <!-- 關閉按鈕（小螢幕 panel 內顯示） -->
+    <button id="panel-close" onclick="closePanelDrawer()">✕ 關閉</button>
+    <div class="panel-title">CP3屏風模塊工具</div>
+
+    <!-- ── 插入模塊收合群組 ── -->
+    <div class="insert-group open" id="insert-group">
+      <div class="insert-group-header" onclick="toggleInsertGroup()">
+        <span>➕ 插入模塊</span>
+        <span class="ig-arrow">▼</span>
+      </div>
+      <div class="insert-group-body">
+        <!-- 分頁標籤 -->
+        <div class="insert-tab-bar">
+          <div class="insert-tab active" id="itab-screen_module" onclick="switchInsertTab('screen_module')">屏風模塊</div>
+          <div class="insert-tab" id="itab-parts" onclick="switchInsertTab('parts')">零件</div>
+        </div>
+
+        <!-- 屏風模塊（LSIDE + BPANEL + RSIDE 組合） -->
+        <div class="insert-panel active" id="ipanel-screen_module">
+          <p class="hint" style="margin-bottom:4px;">插入由左側收邊、面板、右側收邊組成的完整屏風模塊，三件視為一個整體。</p>
+          <button class="btn btn-primary" onclick="insertScreenModule()">插入屏風模塊</button>
+        </div>
+
+        <!-- 零件（屏風面板 + 轉柱） -->
+        <div class="insert-panel" id="ipanel-parts">
+          <p class="hint" style="margin-bottom:6px; font-weight:600; color:var(--text-secondary);">轉柱</p>
+          <div class="custom-select" id="post-custom-select">
+            <div class="custom-select-trigger" onclick="event.stopPropagation(); toggleSelect('post')">
+              <div class="trigger-content" id="post-trigger-content">
+                <span>選擇轉柱模塊</span>
+              </div>
+            </div>
+            <div class="custom-select-options" id="post-options-list"></div>
+          </div>
+          <select id="post-select" style="display: none;"></select>
+          <button class="btn" onclick="insertModule('post')">插入轉柱模塊</button>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="section">
+      <div class="section-title">複製 ／ 刪除選取模塊</div>
+      <div class="btn-row">
+        <button class="btn" onclick="duplicateSelected()" title="快捷鍵：Ctrl+D">⧉ 複製選取</button>
+        <button class="btn btn-danger" onclick="deleteSelected()">✕ 刪除選取</button>
+      </div>
+      <p class="hint">複製：含顏色、備註，貼至空白處（Ctrl+D）<br>刪除：移除目前選取的模塊（del/⌫）</p>
+    </div>
+
+    <hr class="divider">
+
+    <div class="section">
+      <div class="section-title">多選模式（iPad）</div>
+      <button class="btn" id="multiselect-mode-btn" onclick="toggleMultiSelectMode()">☑ 多選模式：關閉</button>
+      <p class="hint">開啟後點擊模塊可累積加選；再次點擊已選取的模塊則取消。</p>
+    </div>
+
+    <hr class="divider">
+
+    <div class="section">
+      <button class="btn btn-danger" onclick="clearCanvas()">清空配置</button>
+    </div>
+
+  </div><!-- /.panel -->
+
+  <div class="canvas-area">
+    <div class="canvas-header">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="canvas-title">CP3屏風 立面配置區</span>
+        <button class="btn" style="padding: 4px 12px; font-size: 12px; font-weight: bold; border-color: #3a8a3a; color: #3a8a3a;" onclick="saveProject()" title="將目前配置儲存為 .line 專案檔">💾 儲存專案</button>
+        <label class="btn" style="padding: 4px 12px; font-size: 12px; font-weight: bold; border-color: #3a8a3a; color: #3a8a3a; cursor: pointer; margin: 0;" title="載入先前儲存的 .line 專案檔">📂 載入專案<input type="file" id="loadProjectInput" accept=".line" style="display:none;" onchange="loadProject(event)"></label>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+        <div class="icon-btn-group" style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+          <button class="btn btn-icon-responsive" style="padding: 4px 9px; font-size: 12px; font-weight: bold; border-color: var(--accent); color: var(--accent);" onclick="captureCanvas()"><span class="material-icons btn-icon-only" style="font-size:20px;vertical-align:middle;color:var(--accent);">photo_camera</span><span class="btn-label-text">📷 擷取配置圖</span></button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="canvas" id="canvas" onclick="handleCanvasClick(event)">
+      <div class="empty-hint" id="empty-hint">請由左側選擇模塊並點擊「插入模塊」開始設計</div>
+      <div id="canvas-viewport"></div>
+      <div id="selection-rect"></div>
+      <!-- 畫布右上角浮動 zoom 控制區，不隨畫布縮放 -->
+      <div class="canvas-zoom-overlay" onclick="event.stopPropagation()">
+        <button class="btn" style="padding:3px 9px; font-size:14px; font-weight:bold; line-height:1;" onclick="setZoom(canvasZoom - 0.1)" title="縮小">－</button>
+        <span id="zoom-label" style="font-size:12px; color:var(--text-secondary); min-width:38px; text-align:center; user-select:none;">60%</span>
+        <button class="btn" style="padding:3px 9px; font-size:14px; font-weight:bold; line-height:1;" onclick="setZoom(canvasZoom + 0.1)" title="放大">＋</button>
+        <button class="btn btn-icon-responsive" style="padding:3px 9px; font-size:12px;" onclick="centerModulesGroup()" title="將所有模塊群組移動到畫布中心"><span class="material-icons btn-icon-only" style="font-size:20px;vertical-align:middle;">my_location</span><span class="btn-label-text">模塊置中</span></button>
+        <button class="btn btn-icon-responsive" style="padding:3px 9px; font-size:12px;" onclick="resetView()" title="重置縮放與平移"><span class="material-icons btn-icon-only" style="font-size:20px;vertical-align:middle;">zoom_in_map</span><span class="btn-label-text">重置</span></button>
+      </div>
+    </div>
+
+    <div class="list-area-wrap">
+      <div class="list-header">
+        <span>配置清單</span>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button class="btn" id="aggregateBtn" style="padding: 4px 12px; font-size: 12px;" onclick="toggleAggregate()">🧮 彙整型號</button>
+          <button class="btn" style="padding: 4px 12px; font-size: 12px;" onclick="exportCSV()">📁 匯出 CSV</button>
+        </div>
+      </div>
+      <div class="list-area">
+      <table>
+        <colgroup>
+          <col class="col-name">
+          <col class="col-id">
+          <col class="col-spec">
+          <col class="col-qty">
+          <col class="col-edge">
+          <col class="col-note">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>模塊名稱</th>
+            <th>型號</th>
+            <th>規格 (mm)</th>
+            <th>數量</th>
+            <th>側收邊</th>
+            <th>註記</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">已成功複製與下載</div>
+
+<script>
+// ==========================================
+// HEX ↔ HSL 工具函式（選色器用）
+// ==========================================
+function hexToHsl(hex) {
+  let r = parseInt(hex.slice(1,3),16)/255;
+  let g = parseInt(hex.slice(3,5),16)/255;
+  let b = parseInt(hex.slice(5,7),16)/255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b);
+  let h, s, l = (max+min)/2;
+  if (max === min) { h = s = 0; }
+  else {
+    const d = max - min;
+    s = l > 0.5 ? d/(2-max-min) : d/(max+min);
+    switch(max){
+      case r: h=((g-b)/d+(g<b?6:0))/6; break;
+      case g: h=((b-r)/d+2)/6; break;
+      case b: h=((r-g)/d+4)/6; break;
+    }
+  }
+  return [Math.round(h*360), Math.round(s*100), Math.round(l*100)];
+}
+
+function hslToHex(h, s, l) {
+  s /= 100; l /= 100;
+  const k = n => (n+h/30)%12;
+  const a = s*Math.min(l,1-l);
+  const f = n => l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));
+  const toHex = x => Math.round(x*255).toString(16).padStart(2,'0');
+  return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
+}
+
+// ==========================================
+// HSL 面板輔助函式（選色器用）
+// ==========================================
+
+/* 更新 H / S / L 三條滑桿的漸層背景 */
+function updateHslSliderGradients(panel, h, s, l) {
+  const hSlider = panel.querySelector('.hsl-slider[data-ch="h"]');
+  const sSlider = panel.querySelector('.hsl-slider[data-ch="s"]');
+  const lSlider = panel.querySelector('.hsl-slider[data-ch="l"]');
+  if (hSlider) {
+    const stops = Array.from({length:13},(_,i)=>`hsl(${i*30},100%,50%)`).join(',');
+    hSlider.style.background = `linear-gradient(to right,${stops})`;
+  }
+  if (sSlider) {
+    sSlider.style.background =
+      `linear-gradient(to right, hsl(${h},0%,${l}%), hsl(${h},100%,${l}%))`;
+  }
+  if (lSlider) {
+    lSlider.style.background =
+      `linear-gradient(to right, hsl(${h},${s}%,0%), hsl(${h},${s}%,50%), hsl(${h},${s}%,100%))`;
+  }
+}
+
+/* 從面板的三條滑桿讀取目前 [h, s, l] */
+function getCurrentHslValues(panel) {
+  const sliders = panel.querySelectorAll('.hsl-slider');
+  let h=0, s=50, l=50;
+  sliders.forEach(sl => {
+    const c = sl.dataset.ch;
+    if      (c==='h') h = parseInt(sl.value);
+    else if (c==='s') s = parseInt(sl.value);
+    else if (c==='l') l = parseInt(sl.value);
+  });
+  return [h, s, l];
+}
+
+/* 更新預覽色塊顏色與 hsl(...) 文字標籤 */
+function updateHslPreview(panel, h, s, l) {
+  const swatch = panel.querySelector('.hsl-preview-swatch');
+  const label  = panel.querySelector('.hsl-value-label');
+  const hex    = hslToHex(h, s, l);
+  if (swatch) swatch.style.background = hex;
+  if (label)  label.textContent = `hsl(${h} ${s}% ${l}%)`;
+}
+
+// ==========================================
+// appendHslPicker — 建立 HSL 面板並掛入 popup
+// ==========================================
+// uid  : mod.uid（用來在套用時找到對應按鈕）
+// idx  : panelHeights 索引
+// initHex : 目前面板顏色（初始值用）
+// onApply : function(hex) — 套用時的回調
+function appendHslPicker(popup, uid, idx, initHex, onApply) {
+  const toggleBtn = document.createElement('button');
+  toggleBtn.type = 'button';
+  toggleBtn.className = 'hsl-toggle-btn';
+  toggleBtn.textContent = '＋ 自訂色（HSL）';
+
+  const panel = document.createElement('div');
+  panel.className = 'hsl-picker-panel';
+
+  const channels = [
+    { ch:'h', label:'H', min:0, max:360, step:1 },
+    { ch:'s', label:'S', min:0, max:100, step:1 },
+    { ch:'l', label:'L', min:0, max:100, step:1 },
+  ];
+
+  let [hv, sv, lv] = hexToHsl(initHex || '#ffffff');
+
+  channels.forEach(({ch, label, min, max, step}) => {
+    const row = document.createElement('div');
+    row.className = 'hsl-row';
+
+    const lbl = document.createElement('span');
+    lbl.className = 'hsl-label';
+    lbl.textContent = label;
+
+    const slider = document.createElement('input');
+    slider.type = 'range';
+    slider.className = 'hsl-slider';
+    slider.dataset.ch = ch;
+    slider.min = min; slider.max = max; slider.step = step;
+    slider.value = ch==='h' ? hv : ch==='s' ? sv : lv;
+
+    const numInput = document.createElement('input');
+    numInput.type = 'number';
+    numInput.className = 'hsl-num';
+    numInput.dataset.ch = ch;
+    numInput.min = min; numInput.max = max; numInput.step = step;
+    numInput.value = slider.value;
+
+    const syncFromSlider = () => {
+      numInput.value = slider.value;
+      const vals = getCurrentHslValues(panel);
+      updateHslSliderGradients(panel, vals[0], vals[1], vals[2]);
+      updateHslPreview(panel, vals[0], vals[1], vals[2]);
+    };
+    const syncFromNum = () => {
+      let v = parseInt(numInput.value);
+      if (isNaN(v)) v = parseInt(slider.min);
+      v = Math.max(parseInt(slider.min), Math.min(parseInt(slider.max), v));
+      numInput.value = v;
+      slider.value = v;
+      const vals = getCurrentHslValues(panel);
+      updateHslSliderGradients(panel, vals[0], vals[1], vals[2]);
+      updateHslPreview(panel, vals[0], vals[1], vals[2]);
+    };
+
+    slider.addEventListener('input',  syncFromSlider);
+    numInput.addEventListener('input',  syncFromNum);
+    numInput.addEventListener('change', syncFromNum);
+    slider.addEventListener('click',   e => e.stopPropagation());
+    numInput.addEventListener('click',  e => e.stopPropagation());
+
+    row.appendChild(lbl);
+    row.appendChild(slider);
+    row.appendChild(numInput);
+    panel.appendChild(row);
+  });
+
+  // ── 預覽列 ──
+  const previewRow = document.createElement('div');
+  previewRow.className = 'hsl-preview-row';
+
+  const swatch = document.createElement('div');
+  swatch.className = 'hsl-preview-swatch';
+
+  const valueLabel = document.createElement('span');
+  valueLabel.className = 'hsl-value-label';
+
+  // ── 吸管按鈕 ──
+  const eyeBtn = document.createElement('button');
+  eyeBtn.type = 'button';
+  eyeBtn.className = 'hsl-eyedropper-btn';
+  const eyeIcon = document.createElement('span');
+  eyeIcon.className = 'material-icons';
+  eyeIcon.textContent = 'colorize';
+  eyeBtn.appendChild(eyeIcon);
+
+  const supportsEyeDropper = typeof EyeDropper !== 'undefined';
+  const isMobileDevice = () =>
+    window.matchMedia('(pointer: coarse)').matches ||
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  let eyeNode; // 實際插入 DOM 的節點（可能是 wrapper）
+  if (!supportsEyeDropper || isMobileDevice()) {
+    eyeBtn.disabled = true;
+    eyeBtn.title = isMobileDevice()
+      ? '滴管工具目前限PC使用'
+      : '您的瀏覽器不支援吸管功能（需 Chrome / Edge 95+）';
+    const eyeBtnWrapper = document.createElement('span');
+    eyeBtnWrapper.style.cssText = 'position:relative;display:inline-flex;flex-shrink:0;';
+    const eyeOverlay = document.createElement('span');
+    eyeOverlay.style.cssText = 'position:absolute;inset:0;cursor:not-allowed;z-index:1;';
+    eyeOverlay.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showToast('滴管工具目前限PC使用');
+    });
+    eyeBtnWrapper.appendChild(eyeBtn);
+    eyeBtnWrapper.appendChild(eyeOverlay);
+    eyeNode = eyeBtnWrapper;
+  } else {
+    eyeBtn.title = '從畫面吸取顏色';
+    eyeBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      try {
+        const dropper = new EyeDropper();
+        const result  = await dropper.open();
+        const hex     = result.sRGBHex;
+        const [h2, s2, l2] = hexToHsl(hex);
+        panel.querySelectorAll('.hsl-slider').forEach(sl => {
+          const c = sl.dataset.ch;
+          sl.value = c==='h' ? h2 : c==='s' ? s2 : l2;
+        });
+        panel.querySelectorAll('.hsl-num').forEach(ni => {
+          const c = ni.dataset.ch;
+          ni.value = c==='h' ? h2 : c==='s' ? s2 : l2;
+        });
+        updateHslSliderGradients(panel, h2, s2, l2);
+        updateHslPreview(panel, h2, s2, l2);
+      } catch (err) { /* 使用者取消，靜默略過 */ }
+    });
+    eyeNode = eyeBtn;
+  }
+
+  // ── 套用按鈕 ──
+  const applyBtn = document.createElement('button');
+  applyBtn.type = 'button';
+  applyBtn.className = 'hsl-apply-btn';
+  applyBtn.textContent = '套用';
+  applyBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const [h2, s2, l2] = getCurrentHslValues(panel);
+    const hex = hslToHex(h2, s2, l2);
+    onApply(hex);
+  });
+
+  previewRow.appendChild(eyeNode);
+  previewRow.appendChild(swatch);
+  previewRow.appendChild(valueLabel);
+  previewRow.appendChild(applyBtn);
+  panel.appendChild(previewRow);
+
+  // 初始化漸層與預覽
+  updateHslSliderGradients(panel, hv, sv, lv);
+  updateHslPreview(panel, hv, sv, lv);
+
+  // ── 展開 / 收合 HSL 面板 ──
+  toggleBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = panel.classList.contains('open');
+    panel.classList.toggle('open', !isOpen);
+    toggleBtn.textContent = isOpen ? '＋ 自訂色（HSL）' : '－ 自訂色（HSL）';
+    if (!isOpen) {
+      // 開啟時同步目前顏色到滑桿
+      let currentHex = initHex || '#ffffff';
+      if (idx === 'edge') {
+        // 收邊色選色器：直接讀 mod.edgeColor
+        const mod = window._cp3Modules && window._cp3Modules.find(m => m.uid === uid);
+        if (mod && mod.edgeColor) currentHex = mod.edgeColor;
+      } else {
+        const mod = window._cp3Modules && window._cp3Modules.find(m =>
+          m.panelHeights && m.uid === uid);
+        currentHex = (mod && mod.panelHeights[idx] && mod.panelHeights[idx].color)
+          || initHex || '#ffffff';
+      }
+      const [h2, s2, l2] = hexToHsl(currentHex);
+      panel.querySelectorAll('.hsl-slider').forEach(sl => {
+        const c = sl.dataset.ch;
+        sl.value = c==='h' ? h2 : c==='s' ? s2 : l2;
+      });
+      panel.querySelectorAll('.hsl-num').forEach(ni => {
+        const c = ni.dataset.ch;
+        ni.value = c==='h' ? h2 : c==='s' ? s2 : l2;
+      });
+      updateHslSliderGradients(panel, h2, s2, l2);
+      updateHslPreview(panel, h2, s2, l2);
+    }
+  });
+
+  popup.appendChild(toggleBtn);
+  popup.appendChild(panel);
+}
+
+// ==========================================
+// 面板選色器：資料層銜接函式
+// ==========================================
+
+// modules 陣列的全域橋接（供 appendHslPicker 展開時即時讀取最新面板色）
+
+/* 套用收邊色到 BPANEL（代表整組），更新資料、畫布 LSIDE/RSIDE SVG、UI 色塊 */
+function setEdgeColor(uid, color) {
+  const mod = (window._cp3Modules || []).find(m => m.uid === uid);
+  if (!mod) return;
+
+  mod.edgeColor = color;
+  refreshEdgeColorSVG(mod);
+
+  // 更新觸發按鈕背景色
+  const btn = document.getElementById(`edgeColorBtn-${uid}`);
+  if (btn) btn.style.background = color;
+
+  // 更新 popup 內色票選取狀態
+  const popup = document.getElementById(`edgeColorPopup-${uid}`);
+  if (popup) {
+    popup.querySelectorAll('.color-swatch-option').forEach(opt => {
+      opt.classList.toggle('selected', opt.dataset.color.toLowerCase() === color.toLowerCase());
+    });
+  }
+
+  closeAllColorPopups();
+}
+
+/* 套用顏色到轉柱，更新資料、畫布 SVG、UI 色塊 */
+function setPostColor(uid, color) {
+  const mod = (window._cp3Modules || []).find(m => m.uid === uid);
+  if (!mod) return;
+
+  mod.edgeColor = color;
+
+  // 更新畫布 SVG
+  const imgEl = document.getElementById(`img-${uid}`);
+  if (imgEl) {
+    const rawSvg = getEffectiveModuleSVG(mod);
+    const svgSrc = rawSvg.replace(/<svg([^>]*)>/, (mt, attrs) => {
+      if (/preserveAspectRatio/.test(attrs)) return mt;
+      return `<svg${attrs} preserveAspectRatio="none">`;
+    });
+    imgEl.src = URL.createObjectURL(new Blob([svgSrc], { type: 'image/svg+xml' }));
+  }
+
+  // 更新觸發按鈕背景色
+  const btn = document.getElementById(`postColorBtn-${uid}`);
+  if (btn) btn.style.background = color;
+
+  // 更新 popup 內色票選取狀態
+  const popup = document.getElementById(`postColorPopup-${uid}`);
+  if (popup) {
+    popup.querySelectorAll('.color-swatch-option').forEach(opt => {
+      opt.classList.toggle('selected', opt.dataset.color.toLowerCase() === color.toLowerCase());
+    });
+  }
+
+  closeAllColorPopups();
+}
+
+/**
+ * buildPostColorCell(mod)
+ * 與 buildEdgeColorCell 相同架構，但用於轉柱模塊，
+ * 命名前綴改為 postColor-{uid}，套用回調改為 setPostColor
+ */
+function buildPostColorCell(mod) {
+  const currentColor = mod.edgeColor || '#d1bec7';
+  const uid = mod.uid;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'color-select';
+  wrap.id = `postColorSelect-${uid}`;
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'color-swatch-btn';
+  btn.id = `postColorBtn-${uid}`;
+  btn.style.background = currentColor;
+  btn.style.opacity = '1';
+  btn.title = '點擊選擇轉柱顏色';
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const target = document.getElementById(`postColorSelect-${uid}`);
+    if (!target) return;
+    const isOpen = target.classList.contains('open');
+    closeAllColorPopups();
+    if (!isOpen) target.classList.add('open');
+  });
+
+  const popup = document.createElement('div');
+  popup.className = 'color-popup';
+  popup.id = `postColorPopup-${uid}`;
+  popup.addEventListener('click', e => e.stopPropagation());
+
+  const swatchGrid = document.createElement('div');
+  swatchGrid.className = 'color-swatch-grid';
+  PANEL_COLORS.filter(c => c.opacity === 1).forEach(({ hex }) => {
+    const opt = document.createElement('button');
+    opt.type = 'button';
+    const isSelected = currentColor.toLowerCase() === hex.toLowerCase();
+    opt.className = 'color-swatch-option' + (isSelected ? ' selected' : '');
+    opt.style.cssText = `background:${hex};opacity:1;`;
+    opt.dataset.color = hex;
+    opt.title = hex;
+    opt.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setPostColor(uid, hex);
+    });
+    swatchGrid.appendChild(opt);
+  });
+  popup.appendChild(swatchGrid);
+
+  // HSL 自訂色面板
+  appendHslPicker(popup, uid, 'edge', currentColor, (hex) => {
+    setPostColor(uid, hex);
+  });
+
+  wrap.appendChild(btn);
+  wrap.appendChild(popup);
+  return wrap;
+}
+
+/**
+ * buildEdgeColorCell(mod)
+ * 回傳一個 .color-select div，供收合列中插入「收邊顏色」選色器。
+ * 與 buildPanelColorCell 相同架構，但：
+ *   - 無 opacity 概念（全部固定 1）
+ *   - 色票只顯示 PANEL_COLORS 中 opacity === 1 的項目（共 7 色）
+ *   - 無玻璃 checkbox
+ *   - 命名前綴改為 edgeColor-{uid}
+ */
+function buildEdgeColorCell(mod) {
+  const currentColor = mod.edgeColor || '#d1bec7';
+  const uid = mod.uid;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'color-select';
+  wrap.id = `edgeColorSelect-${uid}`;
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'color-swatch-btn';
+  btn.id = `edgeColorBtn-${uid}`;
+  btn.style.background = currentColor;
+  btn.style.opacity = '1';
+  btn.title = '點擊選擇收邊顏色';
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const target = document.getElementById(`edgeColorSelect-${uid}`);
+    if (!target) return;
+    const isOpen = target.classList.contains('open');
+    closeAllColorPopups();
+    if (!isOpen) target.classList.add('open');
+  });
+
+  const popup = document.createElement('div');
+  popup.className = 'color-popup';
+  popup.id = `edgeColorPopup-${uid}`;
+  popup.addEventListener('click', e => e.stopPropagation());
+
+  // 色票格：只顯示 opacity === 1 的 7 色
+  const swatchGrid = document.createElement('div');
+  swatchGrid.className = 'color-swatch-grid';
+  PANEL_COLORS.filter(c => c.opacity === 1).forEach(({ hex }) => {
+    const opt = document.createElement('button');
+    opt.type = 'button';
+    const isSelected = currentColor.toLowerCase() === hex.toLowerCase();
+    opt.className = 'color-swatch-option' + (isSelected ? ' selected' : '');
+    opt.style.cssText = `background:${hex};opacity:1;`;
+    opt.dataset.color = hex;
+    opt.title = hex;
+    opt.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setEdgeColor(uid, hex);
+    });
+    swatchGrid.appendChild(opt);
+  });
+  popup.appendChild(swatchGrid);
+
+  // HSL 自訂色面板（onApply 只傳 hex，opacity 固定 1）
+  appendHslPicker(popup, uid, 'edge', currentColor, (hex) => {
+    setEdgeColor(uid, hex);
+  });
+
+  wrap.appendChild(btn);
+  wrap.appendChild(popup);
+  return wrap;
+}
+
+/* 套用顏色到指定面板，更新資料、畫布、UI */
+function setPanelColor(uid, idx, color, opacity) {
+  const mod = (window._cp3Modules || []).find(m => m.uid === uid);
+  if (!mod || !mod.panelHeights || !mod.panelHeights[idx]) return;
+
+  // 寫入顏色
+  mod.panelHeights[idx].color = color;
+
+  // 若色票帶有固定 opacity，一併寫入
+  if (opacity != null) {
+    mod.panelHeights[idx].opacity = opacity;
+  }
+
+  // 更新畫布 SVG
+  refreshBPanelSVG(mod);
+
+  // 更新觸發按鈕背景色與透明度
+  const btn = document.getElementById(`colorBtn-${idx}-${uid}`);
+  if (btn) {
+    btn.style.background = color;
+    btn.style.opacity = mod.panelHeights[idx].opacity != null
+      ? mod.panelHeights[idx].opacity : 1;
+  }
+
+  // 更新 popup 內色票的選取狀態
+  const popup = document.getElementById(`colorPopup-${idx}-${uid}`);
+  if (popup) {
+    const appliedColor   = mod.panelHeights[idx].color.toLowerCase();
+    const appliedOpacity = mod.panelHeights[idx].opacity != null
+      ? mod.panelHeights[idx].opacity : 1;
+    popup.querySelectorAll('.color-swatch-option').forEach(opt => {
+      const matchColor   = opt.dataset.color.toLowerCase() === appliedColor;
+      const matchOpacity = parseFloat(opt.dataset.opacity) === appliedOpacity;
+      opt.classList.toggle('selected', matchColor && matchOpacity);
+    });
+  }
+
+  closeAllColorPopups();
+}
+
+/* 切換指定面板的選色 popup 開關 */
+function toggleColorPopup(uid, idx) {
+  const target = document.getElementById(`colorSelect-${idx}-${uid}`);
+  if (!target) return;
+  const isOpen = target.classList.contains('open');
+  closeAllColorPopups();
+  if (!isOpen) target.classList.add('open');
+}
+
+/* 關閉所有選色 popup，並收合 HSL 面板 */
+function closeAllColorPopups() {
+  document.querySelectorAll('.color-select').forEach(el => el.classList.remove('open'));
+  document.querySelectorAll('.hsl-picker-panel.open').forEach(p => {
+    p.classList.remove('open');
+    const tb = p.previousElementSibling;
+    if (tb && tb.classList.contains('hsl-toggle-btn'))
+      tb.textContent = '＋ 自訂色（HSL）';
+  });
+}
+
+// ==========================================
+// 1. 模組定義與 SVG 空格保留處
+// ==========================================
+const CUSTOM_SVG = {
+  // ── 屏風面板（Screen Panel）子模塊 ──
+  //左側收邊
+  "P3N-LSIDE": `<svg id="_圖層_1" data-name="圖層 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12.34 212.42">  <defs>    <style>      .cls-1 {        fill: #cdcfcf;      }
+      .cls-1, .cls-2 {        stroke: #000;        stroke-miterlimit: 10;      }      .cls-2 {        fill: #d1bec7;      }    </style>  </defs>  <path class="cls-2" d="M6.37.5h5.47v2.83h-6.24s-5.1,0-5.1,0v-.68S4.87.81,4.87.81c.48-.2.99-.31,1.5-.31Z"/>  <rect class="cls-2" x=".5" y="3.33" width="2.83" height="208.59"/>  <rect class="cls-1" x="3.33" y="3.33" width="8.5" height="208.59"/></svg>`,
+  // 右側收邊
+  "P3N-RSIDE": `<svg id="_圖層_1" data-name="圖層 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12.34 212.42">  <defs>    <style>      .cls-1 {        fill: #cdcfcf;      }      .cls-1, .cls-2 {        stroke: #000;        stroke-miterlimit: 10;      }      .cls-2 {        fill: #d1bec7;      }    </style>  </defs>  <path class="cls-2" d="M5.97.5H.5v2.83s6.24,0,6.24,0h5.1v-.68S7.46.81,7.46.81c-.48-.2-.99-.31-1.5-.31Z"/>  <rect class="cls-2" x="9" y="3.33" width="2.83" height="208.59" transform="translate(20.84 215.26) rotate(-180)"/>  <rect class="cls-1" x=".5" y="3.33" width="8.5" height="208.59" transform="translate(9.5 215.26) rotate(-180)"/></svg>`,
+  // 面板主體
+  "P3N-BPANEL": `<svg id="圖層_1" data-name="圖層 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 181.28 212.42"><defs><style>.cls-1{fill:#cdcfcf;}.cls-1,.cls-2,.cls-3{stroke:#000;stroke-miterlimit:10;}.cls-2{fill:#fff;}.cls-3{fill:#d1bec7;}</style></defs><rect class="cls-1" x="0.5" y="3.33" width="180.28" height="4.25"/><rect x="0.5" y="4.59" width="180.28" height="1.13"/><rect class="cls-2" x="0.5" y="7.59" width="180.28" height="201.5"/><rect class="cls-1" x="0.5" y="209.09" width="180.28" height="2.83"/><rect class="cls-3" x="0.5" y="0.5" width="180.28" height="2.83"/></svg>`,
+
+  // 側邊不收邊
+  "P3N-SIDE-N": `<svg id="_圖層_1" data-name="圖層 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10.07 212.42">  <defs>    <style>      .cls-1 {        fill: #cdcfcf;      }      .cls-1, .cls-2 {        stroke: #000;        stroke-miterlimit: 10;      }      .cls-2 {        fill: #d1bec7;      }    </style>  </defs>  <rect class="cls-2" x=".5" y=".5" width="9.07" height="2.82"/>  <rect class="cls-1" x=".5" y="3.33" width="9.07" height="208.59"/></svg>`,
+
+
+  // ── 轉柱（Post）──
+  // 轉柱
+  "P3N-POST": `<svg id="_圖層_1" data-name="圖層 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10.07 213.6">  <defs>    <style>      .cls-1 {        fill: #d1bec7;        stroke: #000;        stroke-miterlimit: 10;      }    </style>  </defs>  <rect class="cls-1" x=".5" y=".5" width="9.07" height="2.83"/>  <rect class="cls-1" x=".5" y="3.33" width="9.07" height="209.76"/></svg>`,
+
+};
+
+// ==========================================
+// 可訂製高度模塊：SVG 動態生成函式
+// ==========================================
+//
+// 關鍵：原始 SVG 使用自己的座標系（viewBox 單位），不等於 mm。
+// 各模塊原始 viewBox 高度與對應預設高度（750mm）的比值：
+//   SVG_COORD_PER_MM = 原始viewBox高度 / 預設mm高度
+// 帽頭在原始 SVG 座標中固定佔 CAP_SVG（原始座標單位）。
+// 動態生成時：
+//   - viewBox 寬度不變
+//   - viewBox 高度 = CAP_SVG + (totalMM - CAP_MM) * SVG_COORD_PER_MM
+//     （帽頭固定，下段按 mm 比例伸縮）
+//   - 帽頭 path/rect 座標完全不變
+//   - 下段 rect 的 y 固定在 CAP_SVG，height 動態計算
+// ==========================================
+
+// 帽頭固定高度（原始 SVG 座標單位，各模塊共用 3.33）
+const CAP_SVG   = 3.33;   // 帽頭佔用的 SVG 座標高度
+const CAP_MM    = 0;      // 帽頭對應的「mm 消耗」= 0（帽頭不算在訂製高度裡，整體高度即下段高度+帽頭）
+const DEFAULT_CUSTOM_HEIGHT = 750; // 預設訂製高度 mm
+
+// 各模塊：原始 viewBox 高度 / 預設 mm 高度 = SVG座標/mm 比例
+// P3N-LSIDE / P3N-RSIDE: viewBox 212.42, default 750mm → 0.28323
+// P3N-SIDE-N / P3N-POST: viewBox 212.42 or 213.6, default 750mm
+const SVG_RATIO = {
+  'P3N-LSIDE':   212.42 / 750,
+  'P3N-RSIDE':   212.42 / 750,
+  'P3N-SIDE-N': 212.42 / 750,
+  'P3N-POST':    213.60 / 750,
+};
+
+/**
+ * 根據訂製高度（mm）動態生成 SVG。
+ * 帽頭保持原始 SVG 座標不變，下段收邊條高度按 mm→SVG座標 比例換算。
+ */
+function generateCustomHeightSVG(moduleId, totalMM, edgeColor) {
+  const ratio   = SVG_RATIO[moduleId] || (212.42 / 750);
+  // 下段在 SVG 座標中的高度 = (總mm - 帽頭mm佔用) * ratio
+  // 帽頭 mm 佔用 ≈ CAP_SVG / ratio（約 11.76mm），但設計圖顯示帽頭是固定配件，
+  // totalMM 即整件總高，帽頭高度以 SVG 座標固定，下段 = totalMM*ratio - CAP_SVG
+  const totalSVG = totalMM * ratio;           // 整體 SVG 座標高度
+  const bodyH    = totalSVG - CAP_SVG;        // 下段 SVG 座標高度（帽頭以下）
+  const capY     = CAP_SVG;                    // 下段起始 y
+  const ec       = edgeColor || '#d1bec7';    // 收邊色（未傳入時維持原預設）
+
+  switch(moduleId) {
+    case 'P3N-LSIDE': {
+      const vbW = 12.34;
+      const vbH = totalSVG;
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${vbW} ${vbH.toFixed(4)}">
+  <defs><style>
+    .cls-1{fill:#cdcfcf;stroke:#000;stroke-miterlimit:10;}
+  </style></defs>
+  <path style="fill:${ec};stroke:#000;stroke-miterlimit:10;" d="M6.37.5h5.47v2.83h-6.24s-5.1,0-5.1,0v-.68S4.87.81,4.87.81c.48-.2.99-.31,1.5-.31Z"/>
+  <rect style="fill:${ec};stroke:#000;stroke-miterlimit:10;" x=".5" y="${capY}" width="2.83" height="${bodyH.toFixed(4)}"/>
+  <rect class="cls-1" x="3.33" y="${capY}" width="8.5" height="${bodyH.toFixed(4)}"/>
+</svg>`;
+    }
+    case 'P3N-RSIDE': {
+      const vbW = 12.34;
+      const vbH = totalSVG;
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${vbW} ${vbH.toFixed(4)}">
+  <defs><style>
+    .cls-1{fill:#cdcfcf;stroke:#000;stroke-miterlimit:10;}
+  </style></defs>
+  <path style="fill:${ec};stroke:#000;stroke-miterlimit:10;" d="M5.97.5H.5v2.83s6.24,0,6.24,0h5.1v-.68S7.46.81,7.46.81c-.48-.2-.99-.31-1.5-.31Z"/>
+  <rect style="fill:${ec};stroke:#000;stroke-miterlimit:10;" x="9"   y="${capY}" width="2.83" height="${bodyH.toFixed(4)}"/>
+  <rect class="cls-1" x=".5"  y="${capY}" width="8.5"  height="${bodyH.toFixed(4)}"/>
+</svg>`;
+    }
+    case 'P3N-SIDE-N': {
+      const vbW = 10.07;
+      const vbH = totalSVG;
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${vbW} ${vbH.toFixed(4)}">
+  <defs><style>
+    .cls-1{fill:#cdcfcf;stroke:#000;stroke-miterlimit:10;}
+  </style></defs>
+  <rect style="fill:${ec};stroke:#000;stroke-miterlimit:10;" x=".5" y=".5"    width="9.07" height="2.82"/>
+  <rect class="cls-1" x=".5" y="${capY}" width="9.07" height="${bodyH.toFixed(4)}"/>
+</svg>`;
+    }
+    case 'P3N-POST': {
+      const vbW = 10.07;
+      const vbH = totalSVG;
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${vbW} ${vbH.toFixed(4)}">
+  <rect style="fill:${ec};stroke:#000;stroke-miterlimit:10;" x=".5" y=".5"    width="9.07" height="2.83"/>
+  <rect style="fill:${ec};stroke:#000;stroke-miterlimit:10;" x=".5" y="${capY}" width="9.07" height="${bodyH.toFixed(4)}"/>
+</svg>`;
+    }
+    default:
+      return CUSTOM_SVG[moduleId] || '';
+  }
+}
+
+/**
+ * 依 panelHeights 陣列動態生成 P3N-BPANEL 的 SVG。
+ *
+ * 換算比例：原始白色 201.5 SVG單位 = 750mm → 0.268667 SVG單位/mm
+ * 每組 = 固定區（灰帽條+黑線，rel_y=4.26）+ 白色區（高度可變）
+ */
+function generateBPanelSVG(panelHeights, customWidthMM, edgeColor) {
+  const heights = (Array.isArray(panelHeights) && panelHeights.length)
+    ? panelHeights : [{ h: 708, color: '#ffffff', opacity: 1, material: '平面烤漆' }];
+
+  // 寬度換算：原始設計基準 700mm → VBW 181.28, W 180.28
+  // 等比縮放：新寬度的 VBW = customWidthMM / 700 * 181.28
+  const _wScale     = customWidthMM ? (customWidthMM / 700) : 1;
+  const W           = parseFloat((180.28 * _wScale).toFixed(4));
+  const X           = 0.5;
+  // VBW 設為 X + W，讓 viewBox 右緣與內容右緣齊平，消除比例性右側留白
+  const VBW         = parseFloat((X + W).toFixed(4));
+  const TOP_Y       = 0.5;
+  const TOP_H       = 2.83;
+  const GRP_START   = 3.33;
+  const BOT_H       = 2.83;
+  const REL_BLACK_Y = 1.26;
+  const REL_WHITE_Y = 4.26;
+  const SVG_PER_MM  = 201.5 / 750;
+
+  let groups = '';
+  let cursor = GRP_START;
+
+  heights.forEach(panel => {
+    const h       = (typeof panel === 'object') ? panel.h       : panel;
+    const color   = (typeof panel === 'object' && panel.color)  ? panel.color   : '#ffffff';
+    const opacity = (typeof panel === 'object' && panel.opacity != null) ? panel.opacity : 1;
+    const whiteH  = h * SVG_PER_MM;
+    const gy  = cursor.toFixed(4);
+    const by_ = (cursor + REL_BLACK_Y).toFixed(4);
+    const wy  = (cursor + REL_WHITE_Y).toFixed(4);
+    groups += `<rect class="cls-1" x="${X}" y="${gy}" width="${W}" height="4.25"/>\n`
+            + `<rect x="${X}" y="${by_}" width="${W}" height="1.13"/>\n`
+            + `<rect x="${X}" y="${wy}" width="${W}" height="${whiteH.toFixed(4)}" fill="${color}" fill-opacity="${opacity}" stroke="#000" stroke-miterlimit="10"/>\n`;
+    cursor += REL_WHITE_Y + whiteH;
+  });
+
+  const botY   = cursor;
+  const totalH = botY + BOT_H + 0.5;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VBW} ${totalH.toFixed(4)}">\n`
+       + `<defs><style>\n`
+       + `  .cls-1{fill:#cdcfcf;stroke:#000;stroke-miterlimit:10;}\n`
+       + `</style></defs>\n`
+       + groups
+       + `<rect class="cls-1" x="${X}" y="${botY.toFixed(4)}" width="${W}" height="${BOT_H}"/>\n`
+       + `<rect style="fill:${edgeColor||'#d1bec7'};stroke:#000;stroke-miterlimit:10;" x="${X}" y="${TOP_Y}" width="${W}" height="${TOP_H}"/>\n`
+       + `</svg>`;
+}
+
+/**
+ * 取得模塊的有效 SVG（高度可訂製時使用動態生成版本）
+ */
+function getModuleSVG(mod, edgeColor) {
+  if (mod.id === 'P3N-BPANEL') {
+    return generateBPanelSVG(
+      mod.panelHeights && mod.panelHeights.length ? mod.panelHeights : [{ h: 708, color: '#ffffff', opacity: 1, material: '平面烤漆' }],
+      mod.customWidth || 700,
+      edgeColor
+    );
+  }
+  const h = mod.customHeight || mod.height || DEFAULT_CUSTOM_HEIGHT;
+  if (mod.heightCustomizable) {
+    return generateCustomHeightSVG(mod.id, h, edgeColor);
+  }
+  return CUSTOM_SVG[mod.id] || '';
+}
+
+/**
+ * 取得模塊的「有效」SVG：
+ * LSIDE / RSIDE 在 useEdge === false 時，改以 P3N-SIDE-N 的外形生成，
+ * 高度仍沿用模塊本身的 customHeight，確保畫布尺寸不變。
+ */
+function getEffectiveModuleSVG(mod) {
+  // BPANEL 直接持有 edgeColor；LSIDE/RSIDE 則從同 gid 的 BPANEL 取；POST 直接持有 edgeColor
+  const edgeColor = (() => {
+    if (mod.id === 'P3N-BPANEL') return mod.edgeColor;
+    if (mod.id === 'P3N-POST') return mod.edgeColor;
+    if (!mod.gid) return undefined;
+    const bpanel = (window._cp3Modules || []).find(m => m.gid === mod.gid && m.id === 'P3N-BPANEL');
+    return bpanel ? bpanel.edgeColor : undefined;
+  })();
+
+  if ((mod.id === 'P3N-LSIDE' || mod.id === 'P3N-RSIDE') && mod.useEdge === false) {
+    const h = mod.customHeight || mod.height || DEFAULT_CUSTOM_HEIGHT;
+    return generateCustomHeightSVG('P3N-SIDE-N', h, edgeColor);
+  }
+  return getModuleSVG(mod, edgeColor);
+}
+
+
+const PRODUCT_MODELS = {
+  // ── 屏風面板子模塊（左側收邊 / 右側收邊 / 面板）──
+  // 尺寸：屏風面板整體 H950*W700mm
+  // 各子模塊實際尺寸待 SVG 確認後可調整 width/height（單位 mm）
+  "screen_panel": [
+    { "id": "P3N-LSIDE",  "name": "左側收邊", "width": 40,  "height": 750, "spec": "", "heightCustomizable": true, "customHeight": 750 },
+    { "id": "P3N-RSIDE",  "name": "右側收邊", "width": 40,  "height": 750, "spec": "", "heightCustomizable": true, "customHeight": 750 },
+    { "id": "P3N-BPANEL", "name": "鋁合金框架",    "width": 636, "height": 750, "spec": "H750*W700", "widthCustomizable": true, "customWidth": 700 },
+    { "id": "P3N-SIDE-N", "name": "側邊不收邊", "width": 32, "height": 750, "spec": "", "heightCustomizable": true, "customHeight": 750 }
+  ],
+  // ── 轉柱 ──
+  "post": [
+    { "id": "P3N-POST", "name": "轉柱", "width": 32, "height": 750, "spec": "", "heightCustomizable": true, "customHeight": 750 }
+  ]
+};
+
+
+
+const SCALE = 0.5;
+// 吸附閾值（邏輯像素）：8px = 80mm，在縮放 1x 時約 8 個螢幕像素的吸附範圍
+const SNAP_THRESHOLD = 8;
+// 切線對齊最大允許偏移量（邏輯像素）：設為模塊最大邊長，確保任何高度的模塊都能完整對齊
+const TANGENT_SNAP_THRESHOLD = 200;
+const ZOOM_MIN = 0.3;
+const ZOOM_MAX = 3.0;
+
+// ── 轉柱型號輔助 ──
+const POST_VALID_HEIGHTS = new Set([750, 950, 1050, 1150, 1250, 1350, 1450, 1550, 1650, 1750]);
+function getPostDisplayId(heightMM) {
+  const h = Math.round(heightMM);
+  if (!POST_VALID_HEIGHTS.has(h)) return ''; // 非標準規格 → 空白
+  return 'P3N-A' + String(h).slice(0, h >= 1000 ? 3 : 2);
+}
+
+// ── 收邊條型號輔助 ──
+const SIDE_VALID_HEIGHTS = new Set([750, 950, 1050, 1150, 1250, 1350, 1450, 1550, 1650, 1750]);
+function getSideDisplayId(heightMM) {
+  const h = Math.round(heightMM);
+  if (!SIDE_VALID_HEIGHTS.has(h)) return '';
+  return 'P3N-B' + String(h).slice(0, h >= 1000 ? 3 : 2);
+}
+
+// ── 面板（BPANEL）型號輔助 ──
+const BPANEL_VALID_HEIGHTS = new Set([750, 950, 1050, 1150, 1250, 1350, 1450, 1550]);
+const BPANEL_VALID_WIDTHS  = new Set([450, 600, 700, 800, 900, 1000, 1200, 1400, 1500, 1600]);
+function getBPanelCode(mm) {
+  const v = Math.round(mm);
+  if (v >= 1000) return String(v).slice(0, 2);
+  return '0' + String(v).charAt(0);
+}
+function getBPanelDisplayId(totalH, widthMM) {
+  const h = Math.round(totalH);
+  const w = Math.round(widthMM);
+  if (!BPANEL_VALID_HEIGHTS.has(h) || !BPANEL_VALID_WIDTHS.has(w)) return '';
+  return 'P3N-B' + getBPanelCode(h) + getBPanelCode(w);
+}
+function getBPanelCustomNote(totalH, widthMM) {
+  const h = Math.round(totalH);
+  const w = Math.round(widthMM);
+  const parts = [];
+  if (!BPANEL_VALID_HEIGHTS.has(h)) parts.push('訂製面板高度');
+  if (!BPANEL_VALID_WIDTHS.has(w))  parts.push('訂製面板寬度');
+  return parts.join(' ');
+}
+
+// ── 面板材質（panelHeights 各片）型號輔助 ──
+// 平面烤漆、波音軟片有效高度（mm）
+const PANEL_MAT_SOLID_HEIGHTS = new Set([200, 300, 400, 700]);
+// 玻璃類有效高度（mm）
+const PANEL_MAT_GLASS_HEIGHTS = new Set([200, 300, 400]);
+// 寬度規格與鋁合金框架相同
+const PANEL_MAT_VALID_WIDTHS  = BPANEL_VALID_WIDTHS;
+
+const PANEL_MAT_PREFIX = {
+  '平面烤漆': 'P3N-PC',
+  '波音軟片': 'P3N-PP',
+  '霧面玻璃': 'P3N-PS',
+  '灰玻璃':   'P3N-PG',
+  '條砂玻璃': 'P3N-PD',
+};
+
+/**
+ * 產生個別面板材質型號。
+ * @param {string} material  面板選項名稱
+ * @param {number} panelH    個別面板高度（使用者 output 值，mm）
+ * @param {number} widthMM   面板寬度（mm）
+ * @returns {string} 型號，非規格尺寸回傳 ''
+ */
+function getPanelMatId(material, panelH, widthMM) {
+  const prefix = PANEL_MAT_PREFIX[material];
+  if (!prefix) return '';
+  const h = Math.round(panelH);
+  const w = Math.round(widthMM);
+  const isGlass = !!PANEL_MATERIAL_GLASS[material];
+  const validH  = isGlass ? PANEL_MAT_GLASS_HEIGHTS : PANEL_MAT_SOLID_HEIGHTS;
+  if (!validH.has(h) || !PANEL_MAT_VALID_WIDTHS.has(w)) return '';
+  return prefix + getBPanelCode(h) + getBPanelCode(w);
+}
+
+/**
+ * 產生個別面板材質的訂製備註。
+ */
+function getPanelMatNote(material, panelH, widthMM) {
+  const h = Math.round(panelH);
+  const w = Math.round(widthMM);
+  const isGlass = !!PANEL_MATERIAL_GLASS[material];
+  const validH  = isGlass ? PANEL_MAT_GLASS_HEIGHTS : PANEL_MAT_SOLID_HEIGHTS;
+  const parts = [];
+  if (!validH.has(h))                    parts.push('訂製面板高度');
+  if (!PANEL_MAT_VALID_WIDTHS.has(w))    parts.push('訂製面板寬度');
+  return parts.join(' ');
+}
+
+/**
+ * 將一個 BPANEL mod 的所有 panelHeights 展開成型號列表。
+ * 回傳 Array<{ id, spec, note, qty:1 }>，相同 id+spec+note 的會合併 qty。
+ */
+function getPanelMatRows(mod) {
+  const w = mod.customWidth || 700;
+  const rowMap = new Map();
+  (mod.panelHeights || []).forEach((p, i) => {
+    const isLast = i === (mod.panelHeights.length - 1);
+    const deduct = isLast ? 41 : 15;
+    // 最後一片面板：規格高度扣除底部結構 50mm（41+9），其餘面板扣除分隔結構 15mm
+    let rawH = isLast ? (p.h + deduct - 50) : (p.h + deduct);  // 個別面板 output 高度
+    const mat    = p.material || '平面烤漆';
+    const id     = getPanelMatId(mat, rawH, w);
+    const spec   = `H${rawH}*W${w}`;
+    const note   = getPanelMatNote(mat, rawH, w);
+    const key    = id + '|' + spec + '|' + note;
+    if (rowMap.has(key)) {
+      rowMap.get(key).qty++;
+    } else {
+      rowMap.set(key, { name: mat, id, spec, note, qty: 1 });
+    }
+  });
+  return Array.from(rowMap.values());
+}
+
+/**
+ * 從 BPANEL 的 panelHeights 陣列計算使用者看到的面板總高（mm）。
+ * 與表格「面板總高」標示一致：最後一片扣 41mm，其他扣 15mm，再還原回去。
+ */
+function calcBPanelTotalH(mod) {
+  if (!Array.isArray(mod.panelHeights) || mod.panelHeights.length === 0) return mod.height;
+  return mod.panelHeights.reduce((s, p, i) => {
+    const isLast = i === mod.panelHeights.length - 1;
+    return s + p.h + (isLast ? 41 : 15);
+  }, 0);
+}
+
+let canvasZoom = 0.6;
+
+// 畫布平移偏移量（螢幕像素，不受縮放影響）
+let panX = 0;
+let panY = 0;
+
+let modules = [];
+window._cp3Modules = modules; // 供 appendHslPicker 展開時即時讀取最新面板色
+let selectedUid = null;
+let selectedUids = new Set(); // 多選集合
+let isAggregated = false; // 配置清單是否為「彙整型號」檢視模式
+let multiSelectMode = false; // iPad 多選模式
+
+// 拖拽控制變數
+let isDragging = false;
+let isMultiDragging = false;
+let isBoxSelecting = false;
+let skipNextCanvasClick = false;
+let dragStartX = 0;
+let dragStartY = 0;
+let moduleStartX = 0;
+let moduleStartY = 0;
+let boxSelectStartX = 0;
+let boxSelectStartY = 0;
+let multiDragStartPositions = []; // 多選拖曳起始位置
+
+// ==========================================
+// 2. 初始化與下拉選單
+// ==========================================
+document.addEventListener("DOMContentLoaded", () => {
+  initSelectData('post');
+  setZoom(0.6);
+  
+  document.addEventListener('click', () => {
+    closeAllSelects();
+    closeAllColorPopups();
+  });
+
+  // 初始化畫布框選功能
+  initBoxSelect();
+
+  // 初始化畫布平移功能
+  initCanvasPan();
+
+  // Delete / Backspace 快捷鍵：刪除選取模塊
+  document.addEventListener('keydown', (e) => {
+    if ((e.key === 'Delete' || e.key === 'Backspace') && !e.repeat) {
+      const tag = document.activeElement && document.activeElement.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (selectedUid !== null || selectedUids.size > 0) {
+        e.preventDefault();
+        deleteSelected();
+      }
+    }
+    // Ctrl+D / Cmd+D：複製選取模塊
+    if ((e.ctrlKey || e.metaKey) && e.key === 'd' && !e.repeat) {
+      const tag = document.activeElement && document.activeElement.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      e.preventDefault();
+      duplicateSelected();
+    }
+  });
+
+  // 滑鼠滾輪縮放
+  document.getElementById('canvas').addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 0.1 : -0.1;
+    setZoom(canvasZoom + delta);
+  }, { passive: false });
+});
+
+// ==========================================
+// 縮放功能
+// ==========================================
+function setZoom(newZoom) {
+  canvasZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, Math.round(newZoom * 10) / 10));
+  document.getElementById('zoom-label').textContent = `${Math.round(canvasZoom * 100)}%`;
+  document.getElementById('canvas').style.setProperty('--zoom', canvasZoom);
+  updateCanvasTransform();
+}
+
+// ==========================================
+// 畫布平移（Pan）功能
+// 統一套用 pan + zoom 到「模塊視口」與「背景網格」，
+// 確保平移時網格與模塊永遠同步移動
+// ==========================================
+function updateCanvasTransform() {
+  const viewport = document.getElementById('canvas-viewport');
+  const canvasEl = document.getElementById('canvas');
+  viewport.style.transform = `translate(${panX}px, ${panY}px) scale(${canvasZoom})`;
+  // 背景網格的兩層圓點使用相同的位移量，維持與模塊同步
+  canvasEl.style.backgroundPosition = `${panX}px ${panY}px, ${panX}px ${panY}px`;
+}
+
+// 重置視圖：縮放與平移一併還原
+function resetView() {
+  panX = 0;
+  panY = 0;
+  setZoom(1.0);
+}
+
+// 模塊置中：僅平移「視圖」（背景網格 + 模塊視口）本身，
+// 不更動任何模塊的邏輯座標，因此網格與模塊的相對位置完全不變
+function centerModulesGroup() {
+  if (modules.length === 0) {
+    showToast("畫布目前沒有任何模塊");
+    return;
+  }
+
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  modules.forEach(mod => {
+    const wPx = mod.width * SCALE;
+    const hPx = mod.height * SCALE;
+    minX = Math.min(minX, mod.x);
+    minY = Math.min(minY, mod.y);
+    maxX = Math.max(maxX, mod.x + wPx);
+    maxY = Math.max(maxY, mod.y + hPx);
+  });
+
+  const groupCenterX = (minX + maxX) / 2;
+  const groupCenterY = (minY + maxY) / 2;
+
+  const canvasEl = document.getElementById('canvas');
+  const viewCenterX = canvasEl.clientWidth / 2;
+  const viewCenterY = canvasEl.clientHeight / 2;
+
+  // 讓群組（以邏輯座標計算的外接框中心）對齊畫布可視區域中心
+  panX = viewCenterX - groupCenterX * canvasZoom;
+  panY = viewCenterY - groupCenterY * canvasZoom;
+  updateCanvasTransform();
+  showToast("已將模塊群組置中");
+}
+
+function initCanvasPan() {
+  const canvasEl = document.getElementById('canvas');
+
+  // ── 滑鼠：右鍵或中鍵拖曳平移 ──
+  canvasEl.addEventListener('mousedown', (e) => {
+    const wantsPan = e.button === 1 || e.button === 2;
+    if (!wantsPan) return;
+    e.preventDefault();
+
+    let isPanning = true;
+    const panStartX = e.clientX;
+    const panStartY = e.clientY;
+    const panOriginX = panX;
+    const panOriginY = panY;
+    canvasEl.style.cursor = 'grabbing';
+
+    const onPanMove = (evt) => {
+      if (!isPanning) return;
+      panX = panOriginX + (evt.clientX - panStartX);
+      panY = panOriginY + (evt.clientY - panStartY);
+      updateCanvasTransform();
+    };
+    const onPanUp = () => {
+      isPanning = false;
+      canvasEl.style.cursor = '';
+      document.removeEventListener('mousemove', onPanMove);
+      document.removeEventListener('mouseup', onPanUp);
+    };
+
+    document.addEventListener('mousemove', onPanMove);
+    document.addEventListener('mouseup', onPanUp);
+  });
+
+  canvasEl.addEventListener('contextmenu', (e) => e.preventDefault());
+  canvasEl.addEventListener('auxclick', (e) => {
+    if (e.button === 1) e.preventDefault();
+  });
+
+  // ── 觸控：雙指平移 + 捏合縮放 ──
+  let touchPanActive = false;
+  let pinchActive    = false;
+  let lastPinchDist  = 0;
+  let panTouchOriginX = 0, panTouchOriginY = 0;
+  let panTouchStartX  = 0, panTouchStartY  = 0;
+
+  function getTouchMidpoint(t1, t2) {
+    return { x: (t1.clientX + t2.clientX) / 2, y: (t1.clientY + t2.clientY) / 2 };
+  }
+  function getTouchDist(t1, t2) {
+    const dx = t1.clientX - t2.clientX, dy = t1.clientY - t2.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  canvasEl.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+      touchPanActive = true;
+      pinchActive    = true;
+      lastPinchDist  = getTouchDist(e.touches[0], e.touches[1]);
+      const mid = getTouchMidpoint(e.touches[0], e.touches[1]);
+      panTouchStartX  = mid.x;
+      panTouchStartY  = mid.y;
+      panTouchOriginX = panX;
+      panTouchOriginY = panY;
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  canvasEl.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2 && (touchPanActive || pinchActive)) {
+      e.preventDefault();
+      const t1 = e.touches[0], t2 = e.touches[1];
+
+      // 捏合縮放（以兩指中心為錨點）
+      const newDist = getTouchDist(t1, t2);
+      if (pinchActive && lastPinchDist > 0) {
+        const newZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, canvasZoom * (newDist / lastPinchDist)));
+        const mid = getTouchMidpoint(t1, t2);
+        const rect = canvasEl.getBoundingClientRect();
+        const anchorX = mid.x - rect.left;
+        const anchorY = mid.y - rect.top;
+        panX = anchorX - (anchorX - panX) * (newZoom / canvasZoom);
+        panY = anchorY - (anchorY - panY) * (newZoom / canvasZoom);
+        canvasZoom = newZoom;
+        document.getElementById('zoom-label').textContent = `${Math.round(canvasZoom * 100)}%`;
+        document.getElementById('canvas').style.setProperty('--zoom', canvasZoom);
+        lastPinchDist = newDist;
+      }
+
+      // 雙指平移
+      if (touchPanActive) {
+        const mid = getTouchMidpoint(t1, t2);
+        panX = panTouchOriginX + (mid.x - panTouchStartX);
+        panY = panTouchOriginY + (mid.y - panTouchStartY);
+      }
+
+      updateCanvasTransform();
+    }
+  }, { passive: false });
+
+  canvasEl.addEventListener('touchend', (e) => {
+    if (e.touches.length < 2) {
+      touchPanActive = false;
+      pinchActive    = false;
+      lastPinchDist  = 0;
+    }
+  }, { passive: true });
+}
+
+// ==========================================
+// 吸附功能：支援多邊形輪廓（含斜邊）的線段對線段精確吸附
+// ==========================================
+
+/**
+ * 各型號輪廓頂點（正規化座標，x/y 均為 0~1）
+ * 頂點順序為順時針封閉多邊形。
+ * null = 使用矩形包圍盒。
+ */
+const MODULE_OUTLINE = (() => {
+  const outlines = {};
+
+  // 所有 P3N- 系列模塊皆為矩形，使用矩形包圍盒（null = 使用矩形）
+  [
+    'P3N-TOP','P3N-LSIDE','P3N-RSIDE','P3N-BPANEL','P3N-POST'
+  ].forEach(id => {
+    outlines[id] = null;
+  });
+
+  return outlines;
+})();
+
+/** 取得模塊在世界坐標中的輪廓頂點（含位移與旋轉） */
+function getModuleWorldVertices(mod) {
+  const wPx = mod.width * SCALE;
+  const hPx = mod.height * SCALE;
+  const outline = MODULE_OUTLINE[mod.id];
+  const normPts = outline ? outline : [[0,0],[1,0],[1,1],[0,1]];
+
+  const cx = mod.x + wPx / 2;
+  const cy = mod.y + hPx / 2;
+
+  const angle = ((mod.rotate || 0) * Math.PI) / 180;
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+
+  return normPts.map(([nx, ny]) => {
+    const lx = nx * wPx - wPx / 2;
+    const ly = ny * hPx - hPx / 2;
+    return {
+      x: cx + lx * cos - ly * sin,
+      y: cy + lx * sin + ly * cos
+    };
+  });
+}
+
+/** 將頂點陣列轉為封閉線段陣列 */
+function vertsToSegments(verts) {
+  const segs = [];
+  const n = verts.length;
+  for (let i = 0; i < n; i++) {
+    const a = verts[i], b = verts[(i + 1) % n];
+    // 略過重複點（折線末端與首端相同時避免零長度線段）
+    if (Math.abs(a.x - b.x) > 0.001 || Math.abs(a.y - b.y) > 0.001) {
+      segs.push(a.x, a.y, b.x, b.y);
+    }
+  }
+  return segs; // 格式：[ax,ay,bx,by, ax,ay,bx,by, ...]
+}
+
+/**
+ * 找 seg1 各取樣點對 seg2 的最近 (dx,dy)，
+ * 並額外計算切線方向對齊偏移 (tdx,tdy) 供任務二/三使用。
+ *
+ * 回傳：
+ *  dist        — 最近距離（總向量長度）
+ *  dx, dy      — 法線方向偏移（讓 seg1 貼上 seg2）
+ *  isParallel  — 兩線段是否近似平行（夾角 < PARALLEL_ANGLE_TOL）
+ *  tdx, tdy    — 切線方向對齊偏移（僅 isParallel 時有意義）
+ *  normalDist  — 純法線距離（垂直距離，用於判斷是否為面對面吸附）
+ */
+function seg2segSnap(a1x,a1y,b1x,b1y, a2x,a2y,b2x,b2y) {
+  // ── 1. 原有邏輯：找最近取樣點的法線偏移 ──
+  const SAMPLES = 5;
+  let bestDistSq = Infinity, bdx = 0, bdy = 0;
+  for (let i = 0; i <= SAMPLES; i++) {
+    const t = i / SAMPLES;
+    const px = a1x + (b1x-a1x)*t, py = a1y + (b1y-a1y)*t;
+    const dx2 = b2x-a2x, dy2 = b2y-a2y, lenSq = dx2*dx2+dy2*dy2;
+    let ct = lenSq < 1e-9 ? 0 : Math.max(0,Math.min(1,((px-a2x)*dx2+(py-a2y)*dy2)/lenSq));
+    const cpx = a2x+ct*dx2, cpy = a2y+ct*dy2;
+    const ddx = cpx-px, ddy = cpy-py, distSq = ddx*ddx+ddy*ddy;
+    if (distSq < bestDistSq) { bestDistSq=distSq; bdx=ddx; bdy=ddy; }
+  }
+  const dist = Math.sqrt(bestDistSq);
+
+  // ── 2. 判斷兩線段是否近似平行 ──
+  const PARALLEL_ANGLE_TOL = 0.12; // sin(約7°) 以內視為平行
+  const d1x = b1x-a1x, d1y = b1y-a1y;
+  const d2x = b2x-a2x, d2y = b2y-a2y;
+  const len1 = Math.sqrt(d1x*d1x+d1y*d1y);
+  const len2 = Math.sqrt(d2x*d2x+d2y*d2y);
+
+  if (len1 < 1e-6 || len2 < 1e-6) {
+    // 退化線段：無法判斷平行，直接回傳法線結果
+    return { dist, dx: bdx, dy: bdy, isParallel: false, tdx: 0, tdy: 0, normalDist: dist };
+  }
+
+  // 單位向量
+  const u1x = d1x/len1, u1y = d1y/len1; // seg1 切線方向
+  const u2x = d2x/len2, u2y = d2y/len2; // seg2 切線方向
+
+  // 叉積絕對值 = |sin θ|，越小越平行
+  const crossAbs = Math.abs(u1x*u2y - u1y*u2x);
+  // 點積 < 0 代表兩線段「面對面」（反向平行）；> 0 代表同向，吸附會造成重疊，排除
+  const dot = u1x*u2x + u1y*u2y;
+  const isParallel = crossAbs < PARALLEL_ANGLE_TOL && dot < 0;
+
+  // ── 3. 純法線距離（連接中點垂直於切線的分量） ──
+  // 使用 seg1 中點到 seg2 的最近點距離在法線方向上的投影
+  const mid1x = (a1x+b1x)*0.5, mid1y = (a1y+b1y)*0.5;
+  const toMid2x = mid1x-a2x, toMid2y = mid1y-a2y;
+  // 法線方向（垂直於 seg2）
+  const nx = -u2y, ny = u2x;
+  const normalDist = Math.abs(toMid2x*nx + toMid2y*ny);
+
+  // ── 4. 切線對齊偏移（僅平行時計算） ──
+  let tdx = 0, tdy = 0;
+  if (isParallel) {
+    // 使用 seg2 的切線方向做投影軸
+    // 將 seg1 兩端點投影到 seg2 所在的切線軸
+    const proj_a1 = a1x*u2x + a1y*u2y;
+    const proj_b1 = b1x*u2x + b1y*u2y;
+    // seg2 兩端點的投影值
+    const proj_a2 = a2x*u2x + a2y*u2y;
+    const proj_b2 = b2x*u2x + b2y*u2y;
+
+    // seg1、seg2 在切線軸上的範圍（排序）
+    const s1min = Math.min(proj_a1, proj_b1);
+    const s1max = Math.max(proj_a1, proj_b1);
+    const s2min = Math.min(proj_a2, proj_b2);
+    const s2max = Math.max(proj_a2, proj_b2);
+
+    // 計算讓 seg1 端點對齊 seg2 端點所需的最小切線偏移：
+    // 若 seg1 的 min 端偏左 → 往右推；若 max 端偏右 → 往左推
+    // 取絕對值較小的那個（最小移動量）
+    const shiftToAlignMin = s2min - s1min; // 讓 seg1.min 對齊 seg2.min
+    const shiftToAlignMax = s2max - s1max; // 讓 seg1.max 對齊 seg2.max
+
+    let tShift = 0;
+    if (Math.abs(shiftToAlignMin) < Math.abs(shiftToAlignMax)) {
+      tShift = shiftToAlignMin;
+    } else {
+      tShift = shiftToAlignMax;
+    }
+
+    tdx = tShift * u2x;
+    tdy = tShift * u2y;
+  }
+
+  return { dist, dx: bdx, dy: bdy, isParallel, tdx, tdy, normalDist };
+}
+
+/**
+ * 主吸附函數：
+ * draggedMods = 被拖曳的模塊陣列（傳入才啟用多邊形吸附）
+ * 退回模式：傳統包圍盒（draggedMods 為空時）
+ *
+ * 回傳 { dx, dy, tdx, tdy }：
+ *   dx/dy   — 法線吸附偏移（讓吸附邊貼合）
+ *   tdx/tdy — 切線對齊偏移（讓對齊邊對齊，任務三套用）
+ *             僅當最佳吸附對為共線平行（isParallel && normalDist < SNAP_THRESHOLD）時非零
+ */
+function getSnapDelta(tx, ty, tw, th, excludeUids, draggedMods) {
+  const statics = modules.filter(m => !excludeUids.has(m.uid));
+  if (statics.length === 0) return { dx: 0, dy: 0, tdx: 0, tdy: 0 };
+  // 吸附閾值隨縮放自動調整：縮得越小，邏輯像素吸附範圍要更大才能讓使用者感受到吸附
+  const effectiveThreshold = SNAP_THRESHOLD / canvasZoom;
+
+  // 取被拖曳模塊的線段
+  let dSegs = []; // [ax,ay,bx,by,...]
+  if (draggedMods && draggedMods.length > 0) {
+    draggedMods.forEach(mod => {
+      const v = getModuleWorldVertices(mod);
+      dSegs = dSegs.concat(vertsToSegments(v));
+    });
+  } else {
+    dSegs = [tx,ty,tx+tw,ty, tx+tw,ty,tx+tw,ty+th, tx+tw,ty+th,tx,ty+th, tx,ty+th,tx,ty];
+  }
+
+  let bestDist = effectiveThreshold + 0.001;
+  let bestDx = 0, bestDy = 0;
+  // 最佳吸附對的切線對齊資訊
+  let bestTdx = 0, bestTdy = 0;
+
+  statics.forEach(o => {
+    const oV = getModuleWorldVertices(o);
+    const oSegs = vertsToSegments(oV);
+
+    for (let di = 0; di < dSegs.length; di += 4) {
+      for (let oi = 0; oi < oSegs.length; oi += 4) {
+        const r = seg2segSnap(
+          dSegs[di],dSegs[di+1],dSegs[di+2],dSegs[di+3],
+          oSegs[oi],oSegs[oi+1],oSegs[oi+2],oSegs[oi+3]
+        );
+        // ── 只接受「面對面」反向平行的邊對 ──
+        // 非平行邊（同向、斜角、端點相碰）一律排除，
+        // 避免錯誤地以模塊「背面」或「側邊端點」觸發吸附，
+        // 造成右側模塊被推到左側或與左側重疊的問題。
+        if (!r.isParallel) continue;
+
+        if (r.dist < bestDist) {
+          bestDist = r.dist;
+          bestDx = r.dx;
+          bestDy = r.dy;
+
+          // 辨識「共線吸附對」：平行 且 法線距離在閾值內 → 帶入切線偏移
+          // normalDist < SNAP_THRESHOLD 確保是「面對面」吸附，而非端點剛好碰到線
+          if (r.normalDist < effectiveThreshold) {
+            bestTdx = r.tdx;
+            bestTdy = r.tdy;
+          } else {
+            // 非共線吸附（斜角相碰、端點對線等）→ 不觸發切線對齊
+            bestTdx = 0;
+            bestTdy = 0;
+          }
+        }
+      }
+    }
+  });
+
+  return { dx: bestDx, dy: bestDy, tdx: bestTdx, tdy: bestTdy };
+}
+
+/**
+ * 偵測轉柱（P3N-POST）左右兩側緊鄰的屏風模塊。
+ *
+ * 判斷條件（以邏輯像素計算）：
+ *   - 左側：某模塊的右緣（x + width*SCALE）與轉柱左緣（postMod.x）距離 ≤ SNAP_ADJ_TOLERANCE
+ *   - 右側：轉柱右緣（postMod.x + postMod.width*SCALE）與某模塊左緣（mod.x）距離 ≤ SNAP_ADJ_TOLERANCE
+ *   - 垂直方向有重疊（任一端點落在對方高度範圍內）
+ *   - 排除轉柱自身
+ *
+ * 屏風模塊以 BPANEL 為高度來源（gid 群組代表），
+ * 若找到的是 LSIDE/RSIDE/SIDE-N，往上追蹤同 gid 的 BPANEL 取高度。
+ *
+ * 回傳 { left: heightMM | null, right: heightMM | null }
+ */
+const SNAP_ADJ_TOLERANCE = 2; // 邏輯像素：吸附後殘留間距容差
+
+/**
+ * 計算 BPANEL 的「面板總高」（mm），與 output 表格顯示的數值一致。
+ * 公式：各片 p.h + 補正值（最後一片 +41，其他 +15）
+ * 若無 panelHeights 資料，退回 mod.height（結構總高）。
+ */
+function getBPanelTotalH(bpanel) {
+  if (!Array.isArray(bpanel.panelHeights) || bpanel.panelHeights.length === 0) {
+    return bpanel.height;
+  }
+  return bpanel.panelHeights.reduce((s, p, i) => {
+    const isLast = i === bpanel.panelHeights.length - 1;
+    return s + p.h + (isLast ? 41 : 15);
+  }, 0);
+}
+
+function getPostNeighborHeights(postMod) {
+  const postLeft  = postMod.x;
+  const postRight = postMod.x + postMod.width * SCALE;
+  const postTop   = postMod.y;
+  const postBot   = postMod.y + postMod.height * SCALE;
+
+  // 取模塊對應的「面板總高」mm（與 output 表格數值一致）
+  // 優先從同 gid 的 BPANEL 取面板總高；無 gid 則用自身 height
+  function resolveHeightMM(mod) {
+    if (mod.gid) {
+      const bp = modules.find(m => m.gid === mod.gid && m.id === 'P3N-BPANEL');
+      if (bp) return getBPanelTotalH(bp);
+    }
+    return mod.height;
+  }
+
+  // 垂直是否重疊
+  function vertOverlap(mod) {
+    const mTop = mod.y;
+    const mBot = mod.y + mod.height * SCALE;
+    return mTop < postBot && mBot > postTop;
+  }
+
+  const screenIds = new Set(['P3N-LSIDE', 'P3N-RSIDE', 'P3N-BPANEL', 'P3N-SIDE-N', 'P3N-TOP']);
+
+  let leftH  = null;
+  let rightH = null;
+
+  modules.forEach(mod => {
+    if (mod.uid === postMod.uid) return;
+    if (!screenIds.has(mod.id))  return;
+    if (!vertOverlap(mod))       return;
+
+    const modLeft  = mod.x;
+    const modRight = mod.x + mod.width * SCALE;
+
+    // 左側鄰居：其右緣貼近轉柱左緣
+    if (Math.abs(modRight - postLeft) <= SNAP_ADJ_TOLERANCE) {
+      const h = resolveHeightMM(mod);
+      if (leftH === null || h > leftH) leftH = h;
+    }
+
+    // 右側鄰居：轉柱右緣貼近其左緣
+    if (Math.abs(postRight - modLeft) <= SNAP_ADJ_TOLERANCE) {
+      const h = resolveHeightMM(mod);
+      if (rightH === null || h > rightH) rightH = h;
+    }
+  });
+
+  return { left: leftH, right: rightH };
+}
+
+/**
+ * 依左右鄰接屏風模塊自動同步轉柱高度。
+ *
+ * 邏輯：
+ *   1. 呼叫 getPostNeighborHeights 取左右鄰居高度（mm）
+ *   2. 若兩側皆無鄰居 → 不動作
+ *   3. 取有值的一側，或兩側皆有時取較大者，作為目標高度
+ *   4. 目標高度與現有高度相同 → 不動作（避免不必要的重繪）
+ *   5. 呼叫 refreshModuleHeight 更新資料 + SVG
+ *   6. 若此轉柱目前顯示在 sidebar 表格中，同步更新高度輸入框的顯示值
+ */
+function syncPostHeightToNeighbors(postMod) {
+  if (postMod.id !== 'P3N-POST') return;
+
+  const { left, right } = getPostNeighborHeights(postMod);
+
+  // 取目標高度：有鄰居取較大值，無鄰居恢復預設高度 750mm
+  let targetH;
+  if (left !== null || right !== null) {
+    if (left !== null && right !== null) {
+      targetH = Math.max(left, right);
+    } else {
+      targetH = left !== null ? left : right;
+    }
+  } else {
+    targetH = 750; // 無鄰居 → 恢復預設
+  }
+
+  // 高度未變 → 略過
+  if (targetH === postMod.customHeight) return;
+
+  // 記錄舊高度（px），用於計算底部固定位移
+  const oldHeightPx = postMod.height * SCALE;
+
+  // 更新模塊資料與畫布 SVG
+  refreshModuleHeight(postMod, targetH);
+
+  // 底部固定：高度增加時向上移動，縮短時向下移動
+  const deltaH = postMod.height * SCALE - oldHeightPx;
+  if (deltaH !== 0) {
+    postMod.y -= deltaH;
+    updateModuleDOMPosition(postMod);
+  }
+
+  // 同步 sidebar 高度輸入框（若該列存在）
+  const row = document.getElementById(`row-${postMod.uid}`);
+  if (row) {
+    const input = row.querySelector('input[type="number"]');
+    if (input) input.value = postMod.customHeight;
+  }
+  syncPostTableRow(postMod);
+}
+
+/**
+ * 當屏風模塊（BPANEL）高度變更後，同步更新其左右兩側緊鄰的所有轉柱高度。
+ *
+ * 判斷「緊鄰」：以 gid 群組整體左緣 / 右緣為基準，
+ *   - 左側轉柱：其右緣與群組左緣距離 ≤ SNAP_ADJ_TOLERANCE，且垂直有重疊
+ *   - 右側轉柱：群組右緣與其左緣距離 ≤ SNAP_ADJ_TOLERANCE，且垂直有重疊
+ *
+ * 對每個找到的轉柱呼叫 syncPostHeightToNeighbors，
+ * 該函數內部已有「高度未變 → 略過」的防衛，不會產生多餘重繪。
+ */
+function syncNeighborPosts(bpanel) {
+  if (!bpanel || bpanel.id !== 'P3N-BPANEL') return;
+
+  // 計算此屏風群組的水平範圍（左緣 / 右緣，邏輯像素）
+  let groupLeft  = bpanel.x;
+  let groupRight = bpanel.x + bpanel.width * SCALE;
+  let groupTop   = bpanel.y;
+  let groupBot   = bpanel.y + bpanel.height * SCALE;
+
+  if (bpanel.gid) {
+    modules.forEach(m => {
+      if (m.gid !== bpanel.gid) return;
+      groupLeft  = Math.min(groupLeft,  m.x);
+      groupRight = Math.max(groupRight, m.x + m.width  * SCALE);
+      groupTop   = Math.min(groupTop,   m.y);
+      groupBot   = Math.max(groupBot,   m.y + m.height * SCALE);
+    });
+  }
+
+  modules.forEach(m => {
+    if (m.id !== 'P3N-POST') return;
+
+    const postLeft  = m.x;
+    const postRight = m.x + m.width * SCALE;
+    const postTop   = m.y;
+    const postBot   = m.y + m.height * SCALE;
+
+    // 垂直重疊判定
+    const overlaps = postTop < groupBot && postBot > groupTop;
+    if (!overlaps) return;
+
+    // 左側轉柱（其右緣貼近群組左緣）或右側轉柱（群組右緣貼近其左緣）
+    const isLeft  = Math.abs(postRight - groupLeft)  <= SNAP_ADJ_TOLERANCE;
+    const isRight = Math.abs(groupRight - postLeft)  <= SNAP_ADJ_TOLERANCE;
+    if (!isLeft && !isRight) return;
+
+    syncPostHeightToNeighbors(m);
+  });
+}
+
+function initSelectData(type) {
+  const nativeSelect = document.getElementById(`${type}-select`);
+  const optionsList = document.getElementById(`${type}-options-list`);
+  const models = PRODUCT_MODELS[type];
+
+  nativeSelect.innerHTML = '';
+  optionsList.innerHTML = '';
+
+  models.forEach((model, index) => {
+    const opt = document.createElement('option');
+    opt.value = model.id;
+    opt.textContent = `${model.name} (${model.id})`;
+    nativeSelect.appendChild(opt);
+
+    const customOpt = document.createElement('div');
+    customOpt.className = `custom-option${index === 0 ? ' selected' : ''}`;
+    customOpt.setAttribute('data-id', model.id);
+    customOpt.onclick = (e) => {
+      e.stopPropagation();
+      selectCustomOption(type, model.id);
+    };
+
+    const iconDiv = document.createElement('div');
+    iconDiv.className = 'custom-option-icon';
+    
+    const imgEl = document.createElement('img');
+    const svgBlob = new Blob([CUSTOM_SVG[model.id] || ""], {type:"image/svg+xml"});
+    imgEl.src = URL.createObjectURL(svgBlob);
+    iconDiv.appendChild(imgEl);
+
+    const nameDiv = document.createElement('div');
+    nameDiv.className = 'custom-option-name';
+    nameDiv.textContent = `${model.name} (${model.id})`;
+
+    customOpt.appendChild(iconDiv);
+    customOpt.appendChild(nameDiv);
+    optionsList.appendChild(customOpt);
+
+    if (index === 0) {
+      updateTriggerContent(type, model.id);
+    }
+  });
+}
+
+function toggleInsertGroup() {
+  document.getElementById('insert-group').classList.toggle('open');
+}
+function switchInsertTab(tab) {
+  ['screen_module','parts'].forEach(t => {
+    document.getElementById('itab-' + t).classList.toggle('active', t === tab);
+    document.getElementById('ipanel-' + t).classList.toggle('active', t === tab);
+  });
+}
+
+function toggleSelect(type) {
+  const target = document.getElementById(`${type}-custom-select`);
+  const isOpen = target.classList.contains('open');
+  closeAllSelects();
+  if (!isOpen) {
+    target.classList.add('open');
+    const trigger = target.querySelector('.custom-select-trigger');
+    const options = target.querySelector('.custom-select-options');
+    const rect = trigger.getBoundingClientRect();
+    options.style.left  = rect.left + 'px';
+    options.style.top   = (rect.bottom + 4) + 'px';
+    options.style.width = rect.width + 'px';
+  }
+}
+
+function closeAllSelects() {
+  document.querySelectorAll('.custom-select').forEach(el => el.classList.remove('open'));
+  closeAllColorPopups();
+}
+
+function selectCustomOption(type, modelId) {
+  const nativeSelect = document.getElementById(`${type}-select`);
+  nativeSelect.value = modelId;
+
+  const optionsList = document.getElementById(`${type}-options-list`);
+  optionsList.querySelectorAll('.custom-option').forEach(opt => {
+    if (opt.getAttribute('data-id') === modelId) {
+      opt.classList.add('selected');
+    } else {
+      opt.classList.remove('selected');
+    }
+  });
+
+  updateTriggerContent(type, modelId);
+  closeAllSelects();
+}
+
+function updateTriggerContent(type, modelId) {
+  const models = PRODUCT_MODELS[type];
+  const model = models.find(m => m.id === modelId);
+  const triggerContent = document.getElementById(`${type}-trigger-content`);
+  if (!model) return;
+
+  triggerContent.innerHTML = `
+    <div class="trigger-icon">
+      <img src="${(()=>{const b=new Blob([CUSTOM_SVG[model.id]||""],{type:"image/svg+xml"});return URL.createObjectURL(b);})()} ">
+    </div>
+    <span style="font-size:12px; color:#1a1a1a;">${model.name}</span>
+  `;
+}
+
+function getSelectedModel(type) {
+  const nativeSelect = document.getElementById(`${type}-select`);
+  const id = nativeSelect.value;
+  return PRODUCT_MODELS[type].find(m => m.id === id);
+}
+
+// ==========================================
+// 3. 畫布核心控制
+// ==========================================
+function insertModule(type) {
+  const model = getSelectedModel(type);
+  if (!model) return;
+
+  const canvasEl = document.getElementById('canvas');
+  const wPx = model.width * SCALE;
+  const hPx = model.height * SCALE;
+
+  // 找一個不與任何現有模塊重疊的插入位置
+  function overlaps(tx, ty) {
+    return modules.some(m => {
+      const mw = m.width * SCALE, mh = m.height * SCALE;
+      return tx < m.x + mw && tx + wPx > m.x && ty < m.y + mh && ty + hPx > m.y;
+    });
+  }
+
+  // 計算畫布目前可見區域（邏輯像素，供第一個模塊置中用）
+  const viewMinX = -panX / canvasZoom;
+  const viewMinY = -panY / canvasZoom;
+  const viewMaxX = viewMinX + canvasEl.clientWidth / canvasZoom;
+  const viewMaxY = viewMinY + canvasEl.clientHeight / canvasZoom;
+  const viewCenterX = (viewMinX + viewMaxX) / 2;
+  const viewCenterY = (viewMinY + viewMaxY) / 2;
+
+  let insertX, insertY;
+  if (modules.length === 0) {
+    // 畫布空白：插在可見區域中心
+    insertX = viewCenterX - wPx / 2;
+    insertY = viewCenterY - hPx / 2;
+  } else {
+    // 從現有模塊群組的邊界向外，以螺旋方式逐層掃描候選位置，
+    // 取第一個不重疊且「距離現有群組中心最近」的位置。
+    const GAP = 10; // 模塊間相鄰間距（邏輯像素）
+    const STEP = GAP; // 掃描步進（越小越精確，但運算量增加）
+
+    // 計算現有模塊群組的邊界框與中心
+    let gMinX = Infinity, gMinY = Infinity, gMaxX = -Infinity, gMaxY = -Infinity;
+    modules.forEach(m => {
+      const mw = m.width * SCALE, mh = m.height * SCALE;
+      if (m.x < gMinX) gMinX = m.x;
+      if (m.y < gMinY) gMinY = m.y;
+      if (m.x + mw > gMaxX) gMaxX = m.x + mw;
+      if (m.y + mh > gMaxY) gMaxY = m.y + mh;
+    });
+    const groupCX = (gMinX + gMaxX) / 2;
+    const groupCY = (gMinY + gMaxY) / 2;
+
+    // 候選位置：緊貼群組邊界四側各放一排，再逐層向外擴展
+    // 以 BFS 螺旋方式：每一層 = 群組 bbox 向外擴展 layerIdx * STEP
+    let bestX = null, bestY = null, bestDist = Infinity;
+    const MARGIN = GAP; // 新模塊與群組邊界的最小間距
+
+    // 最多向外搜尋 200 步（避免無限迴圈）
+    for (let layer = 1; layer <= 200 && bestX === null; layer++) {
+      const outerL = gMinX - layer * STEP - wPx - MARGIN;
+      const outerR = gMaxX + layer * STEP + MARGIN;
+      const outerT = gMinY - layer * STEP - hPx - MARGIN;
+      const outerB = gMaxY + layer * STEP + MARGIN;
+
+      // 四條邊上的候選點：x 或 y 固定在外框邊，另一軸沿整個範圍掃描
+      const candidates = [];
+
+      // 右側一欄（x 固定）
+      for (let y = outerT; y <= outerB + hPx; y += STEP) {
+        candidates.push({ x: outerR, y });
+      }
+      // 左側一欄（x 固定）
+      for (let y = outerT; y <= outerB + hPx; y += STEP) {
+        candidates.push({ x: outerL, y });
+      }
+      // 下方一排（y 固定）
+      for (let x = outerL; x <= outerR + wPx; x += STEP) {
+        candidates.push({ x, y: outerB });
+      }
+      // 上方一排（y 固定）
+      for (let x = outerL; x <= outerR + wPx; x += STEP) {
+        candidates.push({ x, y: outerT });
+      }
+
+      candidates.forEach(({ x, y }) => {
+        if (overlaps(x, y)) return;
+        // 以新模塊中心到群組中心的距離排序
+        const cx = x + wPx / 2, cy = y + hPx / 2;
+        const dist = (cx - groupCX) ** 2 + (cy - groupCY) ** 2;
+        if (dist < bestDist) { bestDist = dist; bestX = x; bestY = y; }
+      });
+    }
+
+    if (bestX !== null) {
+      insertX = bestX;
+      insertY = bestY;
+    } else {
+      // 極端 fallback：群組正右方
+      insertX = gMaxX + GAP;
+      insertY = groupCY - hPx / 2;
+    }
+  }
+
+  const uid = Date.now() + Math.floor(Math.random() * 1000);
+
+  const initCustomH = model.customHeight || model.height;
+  const newModule = {
+    uid: uid,
+    id: model.id,
+    name: model.name,
+    width: model.width,
+    height: model.heightCustomizable ? initCustomH : model.height,
+    spec: model.spec,
+    x: insertX,
+    y: insertY,
+    rotate: 0,
+    note: model.note || "",
+    acrylicQty: 0,
+    heightCustomizable: model.heightCustomizable || false,
+    customHeight: model.heightCustomizable ? initCustomH : undefined,
+    panelHeights: model.id === 'P3N-BPANEL' ? [{ h: 750 - 41, color: '#ffffff', opacity: 1, material: '平面烤漆' }] : undefined,
+    widthCustomizable: model.widthCustomizable || false,
+    customWidth: model.widthCustomizable ? (model.customWidth || model.width) : undefined,
+  };
+
+  // P3N-BPANEL：依 panelHeights 重新算正確的初始高度；依 customWidth 換算初始像素寬度
+  if (newModule.id === 'P3N-BPANEL') {
+    const SVG_PER_MM = 201.5 / 750;
+    const fixedSVG   = 3.33 + newModule.panelHeights.length * 4.26 + 2.83 + 0.5;
+    newModule.height  = Math.round(fixedSVG / SVG_PER_MM + newModule.panelHeights.reduce((s, p) => s + p.h, 0));
+    // width（邏輯像素單位）= customWidth mm 換算（原始 700mm → 636px，即 ratio = 636/700）
+    const W_RATIO = 636 / 700;
+    newModule.width = Math.round((newModule.customWidth || 700) * W_RATIO);
+  }
+
+  modules.push(newModule);
+  renderModuleDOM(newModule);
+  renderTable();
+  selectModule(uid);
+  updateEmptyHint();
+  showToast(`已插入 ${model.id}`);
+}
+
+// ==========================================
+// 插入屏風模塊（LSIDE + BPANEL + RSIDE 組合）
+// ==========================================
+function insertScreenModule() {
+  const canvasEl = document.getElementById('canvas');
+
+  // ── 1. 建立 BPANEL 資料，先算出總高（mm）與像素寬 ──
+  const INIT_PANEL_H = 750 - 41; // 單段面板初始高度 mm（與 insertModule 一致）
+  const SVG_PER_MM  = 201.5 / 750;
+  const BPANEL_CUSTOM_W = 700;   // mm
+  const W_RATIO = 636 / 700;
+
+  const panelHeights = [{ h: INIT_PANEL_H, color: '#ffffff', opacity: 1, material: '平面烤漆' }];
+  const fixedSVG     = 3.33 + panelHeights.length * 4.26 + 2.83 + 0.5;
+  const bpanelH      = Math.round(fixedSVG / SVG_PER_MM + panelHeights.reduce((s, p) => s + p.h, 0));
+  const bpanelW      = Math.round(BPANEL_CUSTOM_W * W_RATIO); // px（邏輯單位）
+
+  // LSIDE / RSIDE 寬度（mm → px）
+  const SIDE_W_MM = 40;
+  const SIDE_W_PX = SIDE_W_MM * SCALE;
+
+  // 群組整體寬高（邏輯像素）= LSIDE_px + BPANEL_px + RSIDE_px
+  const groupWpx = SIDE_W_PX + bpanelW * SCALE + SIDE_W_PX;
+  const groupHpx = bpanelH * SCALE;
+
+  // ── 2. 找不重疊的插入位置（與 insertModule 同邏輯，以整個群組 bbox 為單位）──
+  function groupOverlaps(ax, ay) {
+    const rects = [
+      { x: ax,                             y: ay, w: SIDE_W_PX,       h: groupHpx },
+      { x: ax + SIDE_W_PX,                 y: ay, w: bpanelW * SCALE, h: groupHpx },
+      { x: ax + SIDE_W_PX + bpanelW * SCALE, y: ay, w: SIDE_W_PX,    h: groupHpx },
+    ];
+    return rects.some(r =>
+      modules.some(m => {
+        const mw = m.width * SCALE, mh = m.height * SCALE;
+        return r.x < m.x + mw && r.x + r.w > m.x && r.y < m.y + mh && r.y + r.h > m.y;
+      })
+    );
+  }
+
+  const viewMinX  = -panX / canvasZoom;
+  const viewMinY  = -panY / canvasZoom;
+  const viewMaxX  = viewMinX + canvasEl.clientWidth  / canvasZoom;
+  const viewMaxY  = viewMinY + canvasEl.clientHeight / canvasZoom;
+  const viewCenterX = (viewMinX + viewMaxX) / 2;
+  const viewCenterY = (viewMinY + viewMaxY) / 2;
+
+  let insertX, insertY;
+  if (modules.length === 0) {
+    insertX = viewCenterX - groupWpx / 2;
+    insertY = viewCenterY - groupHpx / 2;
+  } else {
+    let gMinX = Infinity, gMinY = Infinity, gMaxX = -Infinity, gMaxY = -Infinity;
+    modules.forEach(m => {
+      const mw = m.width * SCALE, mh = m.height * SCALE;
+      gMinX = Math.min(gMinX, m.x); gMinY = Math.min(gMinY, m.y);
+      gMaxX = Math.max(gMaxX, m.x + mw); gMaxY = Math.max(gMaxY, m.y + mh);
+    });
+    const groupCX = (gMinX + gMaxX) / 2;
+    const groupCY = (gMinY + gMaxY) / 2;
+    const GAP = 10, STEP = 10;
+    let bestX = null, bestY = null, bestDist = Infinity;
+    for (let layer = 1; layer <= 200 && bestX === null; layer++) {
+      const outerL = gMinX - layer * STEP - groupWpx - GAP;
+      const outerR = gMaxX + layer * STEP + GAP;
+      const outerT = gMinY - layer * STEP - groupHpx - GAP;
+      const outerB = gMaxY + layer * STEP + GAP;
+      const candidates = [];
+      for (let y = outerT; y <= outerB + groupHpx; y += STEP) {
+        candidates.push({ x: outerR, y }); candidates.push({ x: outerL, y });
+      }
+      for (let x = outerL; x <= outerR + groupWpx; x += STEP) {
+        candidates.push({ x, y: outerB }); candidates.push({ x, y: outerT });
+      }
+      candidates.forEach(({ x, y }) => {
+        if (groupOverlaps(x, y)) return;
+        const cx = x + groupWpx / 2, cy = y + groupHpx / 2;
+        const dist = (cx - groupCX) ** 2 + (cy - groupCY) ** 2;
+        if (dist < bestDist) { bestDist = dist; bestX = x; bestY = y; }
+      });
+    }
+    insertX = bestX !== null ? bestX : gMaxX + GAP;
+    insertY = bestX !== null ? bestY : groupCY - groupHpx / 2;
+  }
+
+  // ── 3. 建立共用 gid 與三個 module 物件 ──
+  const gid    = Date.now();
+  const baseUid = gid;
+
+  const lsideH = bpanelH; // LSIDE/RSIDE 高度對齊 BPANEL 總高
+
+  const modLSIDE = {
+    uid: baseUid,
+    id: 'P3N-LSIDE', name: '左側收邊',
+    width: SIDE_W_MM, height: lsideH,
+    spec: '', note: '',
+    x: insertX, y: insertY,
+    rotate: 0, acrylicQty: 0,
+    heightCustomizable: true, customHeight: lsideH,
+    useEdge: true, // true = 使用收邊(P3N-LSIDE)，false = 不收邊(P3N-SIDE-N)
+    gid,
+  };
+
+  // 插入時面板總高 = 單段 panelHeights[0].h + 41（最後一段補正）
+  const _initTotalH = panelHeights.reduce((s, p, i) => s + p.h + (i === panelHeights.length - 1 ? 41 : 15), 0);
+  const _initBPanelId = getBPanelDisplayId(_initTotalH, BPANEL_CUSTOM_W);
+
+  const modBPANEL = {
+    uid: baseUid + 1,
+    id: 'P3N-BPANEL', name: '鋁合金框架',
+    width: bpanelW, height: bpanelH,
+    spec: `H${_initTotalH}*W${BPANEL_CUSTOM_W}`,
+    note: getBPanelCustomNote(_initTotalH, BPANEL_CUSTOM_W),
+    x: insertX + SIDE_W_PX, y: insertY,
+    rotate: 0, acrylicQty: 0,
+    heightCustomizable: false,
+    widthCustomizable: true, customWidth: BPANEL_CUSTOM_W,
+    panelHeights,
+    edgeColor: '#d1bec7', // 收邊顏色，由 BPANEL 代表整組持有
+    gid,
+  };
+
+  const modRSIDE = {
+    uid: baseUid + 2,
+    id: 'P3N-RSIDE', name: '右側收邊',
+    width: SIDE_W_MM, height: lsideH,
+    spec: '', note: '',
+    x: modBPANEL.x + bpanelW * SCALE, y: insertY,
+    rotate: 0, acrylicQty: 0,
+    heightCustomizable: true, customHeight: lsideH,
+    useEdge: true, // true = 使用收邊(P3N-RSIDE)，false = 不收邊(P3N-SIDE-N)
+    gid,
+  };
+
+  // ── 4. 推入 modules 並渲染 ──
+  [modLSIDE, modBPANEL, modRSIDE].forEach(mod => {
+    modules.push(mod);
+    renderModuleDOM(mod);
+  });
+
+  // 多選選取整組
+  selectedUid = null;
+  selectedUids.clear();
+  [modLSIDE, modBPANEL, modRSIDE].forEach(mod => {
+    selectedUids.add(mod.uid);
+    const div = document.getElementById(`mod-${mod.uid}`);
+    if (div) div.classList.add('multi-selected');
+  });
+
+  renderTable();
+  updateEmptyHint();
+  showToast('已插入屏風模塊');
+}
+
+function renderModuleDOM(mod) {
+  const viewport = document.getElementById('canvas-viewport');
+  const div = document.createElement('div');
+  div.className = 'product-module';
+  div.id = `mod-${mod.uid}`;
+
+  div.style.width = `${mod.width * SCALE}px`;
+  div.style.height = `${mod.height * SCALE}px`;
+  div.style.left = `${mod.x}px`;
+  div.style.top = `${mod.y}px`;
+
+  const imgEl = document.createElement('img');
+  imgEl.id = `img-${mod.uid}`;
+  // 注入 preserveAspectRatio="none" 確保 SVG 在 iPad Safari 正確填滿容器
+  // 若已加購壓克力片，直接使用 id+'S' 的 SVG 圖示
+  const _svgId = ((mod.acrylicQty || 0) > 0 && CUSTOM_SVG[mod.id + 'S']) ? (mod.id + 'S') : mod.id;
+  const _rawSvg = (mod.id === 'P3N-BPANEL') ? getEffectiveModuleSVG(mod)
+    : mod.heightCustomizable ? getEffectiveModuleSVG(mod) : (CUSTOM_SVG[_svgId] || "");
+  const _svgSrc = _rawSvg.replace(/<svg([^>]*)>/, (m, attrs) => {
+    if (/preserveAspectRatio/.test(attrs)) return m;
+    return `<svg${attrs} preserveAspectRatio="none">`;
+  });
+  const _svgBlob = new Blob([_svgSrc], {type:"image/svg+xml"});
+  imgEl.src = URL.createObjectURL(_svgBlob);
+  div.appendChild(imgEl);
+
+  // gid 群組：LSIDE SVG viewBox 右側有固定 0.5px stroke 留白，
+  // 讓 img 寬度多 1px（overflow: visible）使 stroke 視覺重疊，消除與 BPANEL 左側的縫隙。
+  // BPANEL 的 viewBox 已修正為內容右緣對齊，不需要額外補償。
+  if (mod.gid) {
+    if (mod.id === 'P3N-LSIDE') {
+      imgEl.style.width = 'calc(100% + 1px)';
+    }
+  }
+
+  div.style.transform = `rotate(${mod.rotate}deg)`;
+
+  div.addEventListener('mousedown', (e) => {
+    e.stopPropagation();
+    // Ctrl（Windows）或 ⌘ Command（Mac）+ 點擊：加選 / 減選
+    // gid 群組成員不允許單件加選/減選，Ctrl 點擊一律選整組
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      if (mod.gid) {
+        expandSelectionForGid(mod.gid);
+      } else {
+        toggleModuleSelection(mod.uid);
+      }
+      return;
+    }
+    // 若點擊的模塊已在多選集合中，直接開始群組拖曳
+    if (selectedUids.size > 1 && selectedUids.has(mod.uid)) {
+      startDrag(e, mod);
+    } else {
+      // gid 群組：整組進入多選再拖曳
+      if (mod.gid) {
+        expandSelectionForGid(mod.gid);
+      } else {
+        selectModule(mod.uid);
+      }
+      startDrag(e, mod);
+    }
+  });
+
+  // 阻止 click 冒泡到 canvas，避免觸發 handleCanvasClick 清空選取
+  div.addEventListener('click', (e) => e.stopPropagation());
+
+  div.addEventListener('touchstart', (e) => {
+    e.stopPropagation();
+    if (multiSelectMode) {
+      // 多選模式：gid 群組一律選整組
+      if (mod.gid) {
+        expandSelectionForGid(mod.gid);
+      } else {
+        toggleModuleSelection(mod.uid);
+      }
+    } else if (selectedUids.size > 1 && selectedUids.has(mod.uid)) {
+      // 已在多選集合中：直接群組拖曳
+      startDrag(e.touches[0], mod);
+    } else {
+      // gid 群組：整組進入多選再拖曳
+      if (mod.gid) {
+        expandSelectionForGid(mod.gid);
+      } else {
+        selectModule(mod.uid);
+      }
+      startDrag(e.touches[0], mod);
+    }
+  }, { passive: true });
+
+
+
+  viewport.appendChild(div);
+}
+
+function updateModuleDOMPosition(mod) {
+  const div = document.getElementById(`mod-${mod.uid}`);
+  if (div) {
+    div.style.left = `${mod.x}px`;
+    div.style.top = `${mod.y}px`;
+    div.style.transform = `rotate(${mod.rotate}deg)`;
+  }
+}
+
+function selectModule(uid) {
+  // 清除舊單選
+  if (selectedUid !== null) {
+    const prevDiv = document.getElementById(`mod-${selectedUid}`);
+    if (prevDiv) prevDiv.classList.remove('selected');
+    const prevRow = document.getElementById(`row-${selectedUid}`);
+    if (prevRow) prevRow.style.background = '';
+  }
+  // 清除多選
+  clearMultiSelection();
+
+  selectedUid = uid;
+
+  if (selectedUid !== null) {
+    const currDiv = document.getElementById(`mod-${selectedUid}`);
+    if (currDiv) currDiv.classList.add('selected');
+    const currRow = document.getElementById(`row-${selectedUid}`);
+    if (currRow) currRow.style.background = '#e1f0fe';
+  }
+}
+
+// Ctrl / ⌘ + 點擊：加入或移出多選集合
+function toggleModuleSelection(uid) {
+  // 若目前是單選狀態，先將單選模塊納入多選集合
+  if (selectedUid !== null && selectedUids.size === 0) {
+    const prevDiv = document.getElementById(`mod-${selectedUid}`);
+    if (prevDiv) { prevDiv.classList.remove('selected'); prevDiv.classList.add('multi-selected'); }
+    const prevRow = document.getElementById(`row-${selectedUid}`);
+    if (prevRow) { prevRow.style.background = ''; prevRow.classList.add('multi-selected-row'); }
+    selectedUids.add(selectedUid);
+    selectedUid = null;
+  }
+
+  if (selectedUids.has(uid)) {
+    // 已在集合中 → 移除高亮，從集合刪除
+    const div = document.getElementById(`mod-${uid}`);
+    if (div) div.classList.remove('multi-selected');
+    const row = document.getElementById(`row-${uid}`);
+    if (row) row.classList.remove('multi-selected-row');
+    selectedUids.delete(uid);
+
+    // 若集合剩下 1 個，退回單選模式
+    if (selectedUids.size === 1) {
+      const lastUid = [...selectedUids][0];
+      selectedUids.clear();
+      // 直接設定單選，不呼叫 selectModule（避免它再次 clearMultiSelection）
+      selectedUid = lastUid;
+      const lastDiv = document.getElementById(`mod-${lastUid}`);
+      if (lastDiv) lastDiv.classList.add('selected');
+      const lastRow = document.getElementById(`row-${lastUid}`);
+      if (lastRow) lastRow.style.background = '#e1f0fe';
+    } else if (selectedUids.size === 0) {
+      // 集合清空，取消所有選取
+      selectedUid = null;
+    }
+  } else {
+    // 不在集合中 → 加入
+    selectedUids.add(uid);
+    const div = document.getElementById(`mod-${uid}`);
+    if (div) div.classList.add('multi-selected');
+    const row = document.getElementById(`row-${uid}`);
+    if (row) row.classList.add('multi-selected-row');
+  }
+}
+
+// ==========================================
+// 多選管理
+// ==========================================
+function clearMultiSelection() {
+  selectedUids.forEach(uid => {
+    const div = document.getElementById(`mod-${uid}`);
+    if (div) div.classList.remove('multi-selected');
+    const row = document.getElementById(`row-${uid}`);
+    if (row) row.classList.remove('multi-selected-row');
+  });
+  selectedUids.clear();
+}
+
+function applyMultiSelection(uids) {
+  // 先清除單選
+  if (selectedUid !== null) {
+    const prevDiv = document.getElementById(`mod-${selectedUid}`);
+    if (prevDiv) prevDiv.classList.remove('selected');
+    const prevRow = document.getElementById(`row-${selectedUid}`);
+    if (prevRow) prevRow.style.background = '';
+    selectedUid = null;
+  }
+  clearMultiSelection();
+
+  uids.forEach(uid => {
+    selectedUids.add(uid);
+    const div = document.getElementById(`mod-${uid}`);
+    if (div) div.classList.add('multi-selected');
+    const row = document.getElementById(`row-${uid}`);
+    if (row) row.classList.add('multi-selected-row');
+  });
+}
+
+// ==========================================
+// gid 群組整組選取輔助
+// ==========================================
+// 將同 gid 的所有成員加入 selectedUids（多選模式），
+// 先清除原有單選/多選狀態，確保整組乾淨進入多選。
+function expandSelectionForGid(gid) {
+  const members = modules.filter(m => m.gid === gid);
+  if (members.length === 0) return;
+
+  // 清除舊選取
+  if (selectedUid !== null) {
+    const prevDiv = document.getElementById(`mod-${selectedUid}`);
+    if (prevDiv) prevDiv.classList.remove('selected');
+    const prevRow = document.getElementById(`row-${selectedUid}`);
+    if (prevRow) prevRow.style.background = '';
+    selectedUid = null;
+  }
+  // 注意：不清空現有 selectedUids，讓框選結果可以累積
+  // 但若目前 selectedUids 不含任何 gid 成員，則視為全新選取，先清空
+  const alreadyHasMember = members.some(m => selectedUids.has(m.uid));
+  if (!alreadyHasMember) {
+    clearMultiSelection();
+  }
+
+  members.forEach(m => {
+    selectedUids.add(m.uid);
+    const div = document.getElementById(`mod-${m.uid}`);
+    if (div) { div.classList.remove('selected'); div.classList.add('multi-selected'); }
+    const row = document.getElementById(`row-${m.uid}`);
+    if (row) { row.style.background = ''; row.classList.add('multi-selected-row'); }
+  });
+}
+
+// ==========================================
+// 框選引擎
+// ==========================================
+function initBoxSelect() {
+  const canvasEl = document.getElementById('canvas');
+  const selRect = document.getElementById('selection-rect');
+
+  canvasEl.addEventListener('mousedown', (e) => {
+    // 只有直接點到 canvas 背景（非模塊）才啟動框選
+    if (e.target !== canvasEl && e.target.id !== 'empty-hint' && e.target.id !== 'selection-rect' && e.target.id !== 'canvas-viewport') return;
+    // 中鍵拖曳或按住空白鍵時，交由畫布平移功能處理，框選不介入
+    if (e.button !== 0) return;
+
+    isBoxSelecting = true;
+    const rect = canvasEl.getBoundingClientRect();
+    // 框選起始點：視覺坐標（用於畫選框）
+    boxSelectStartX = e.clientX - rect.left;
+    boxSelectStartY = e.clientY - rect.top;
+
+    selRect.style.left   = boxSelectStartX + 'px';
+    selRect.style.top    = boxSelectStartY + 'px';
+    selRect.style.width  = '0px';
+    selRect.style.height = '0px';
+    selRect.style.display = 'block';
+
+    const onMove = (ev) => {
+      if (!isBoxSelecting) return;
+      const cx = ev.clientX - rect.left;
+      const cy = ev.clientY - rect.top;
+
+      // 選框繪製在視覺空間
+      const x = Math.min(cx, boxSelectStartX);
+      const y = Math.min(cy, boxSelectStartY);
+      const w = Math.abs(cx - boxSelectStartX);
+      const h = Math.abs(cy - boxSelectStartY);
+
+      selRect.style.left   = x + 'px';
+      selRect.style.top    = y + 'px';
+      selRect.style.width  = w + 'px';
+      selRect.style.height = h + 'px';
+    };
+
+    const onUp = (ev) => {
+      if (!isBoxSelecting) return;
+      isBoxSelecting = false;
+      selRect.style.display = 'none';
+
+      const cx = ev.clientX - rect.left;
+      const cy = ev.clientY - rect.top;
+
+      if (Math.abs(cx - boxSelectStartX) < 4 && Math.abs(cy - boxSelectStartY) < 4) {
+        // 單點空白處：清除所有選取（含多選）
+        clearMultiSelection();
+        selectModule(null);
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        skipNextCanvasClick = false;
+        return;
+      }
+
+      skipNextCanvasClick = true;
+
+      // 轉換為邏輯坐標（模塊的 x/y 為邏輯像素）後做交集判斷，需扣除目前畫布平移量
+      const sx = (Math.min(cx, boxSelectStartX) - panX) / canvasZoom;
+      const sy = (Math.min(cy, boxSelectStartY) - panY) / canvasZoom;
+      const ex = (Math.max(cx, boxSelectStartX) - panX) / canvasZoom;
+      const ey = (Math.max(cy, boxSelectStartY) - panY) / canvasZoom;
+
+      const matched = modules.filter(mod => {
+        const wPx = mod.width * SCALE;
+        const hPx = mod.height * SCALE;
+        const modCx = mod.x + wPx / 2;
+        const modCy = mod.y + hPx / 2;
+        return modCx >= sx && modCx <= ex && modCy >= sy && modCy <= ey;
+      });
+
+      if (matched.length === 1) {
+        if (matched[0].gid) {
+          expandSelectionForGid(matched[0].gid);
+        } else {
+          selectModule(matched[0].uid);
+        }
+      } else if (matched.length > 1) {
+        applyMultiSelection(matched.map(m => m.uid));
+        // 擴展所有被框選到的 gid 群組
+        const gids = new Set(matched.filter(m => m.gid).map(m => m.gid));
+        gids.forEach(gid => expandSelectionForGid(gid));
+        showToast(`已選取 ${selectedUids.size} 個模塊`);
+      } else {
+        selectModule(null);
+      }
+
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+
+  // ── 觸控：單指在畫布空白處拖曳 → 框選 ──
+  canvasEl.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    const target = touch.target;
+    if (target !== canvasEl && target.id !== 'empty-hint' && target.id !== 'selection-rect' && target.id !== 'canvas-viewport') return;
+
+    isBoxSelecting = true;
+    const rect = canvasEl.getBoundingClientRect();
+    boxSelectStartX = touch.clientX - rect.left;
+    boxSelectStartY = touch.clientY - rect.top;
+
+    selRect.style.left   = boxSelectStartX + 'px';
+    selRect.style.top    = boxSelectStartY + 'px';
+    selRect.style.width  = '0px';
+    selRect.style.height = '0px';
+    selRect.style.display = 'block';
+
+    const onTouchMove = (ev) => {
+      if (!isBoxSelecting || ev.touches.length !== 1) return;
+      const t = ev.touches[0];
+      const cx = t.clientX - rect.left;
+      const cy = t.clientY - rect.top;
+      selRect.style.left   = Math.min(cx, boxSelectStartX) + 'px';
+      selRect.style.top    = Math.min(cy, boxSelectStartY) + 'px';
+      selRect.style.width  = Math.abs(cx - boxSelectStartX) + 'px';
+      selRect.style.height = Math.abs(cy - boxSelectStartY) + 'px';
+    };
+
+    const onTouchEnd = (ev) => {
+      if (!isBoxSelecting) return;
+      isBoxSelecting = false;
+      selRect.style.display = 'none';
+
+      const lastTouch = ev.changedTouches[0];
+      const cx = lastTouch.clientX - rect.left;
+      const cy = lastTouch.clientY - rect.top;
+
+      canvasEl.removeEventListener('touchmove', onTouchMove);
+      canvasEl.removeEventListener('touchend', onTouchEnd);
+
+      if (Math.abs(cx - boxSelectStartX) < 8 && Math.abs(cy - boxSelectStartY) < 8) {
+        clearMultiSelection();
+        selectModule(null);
+        skipNextCanvasClick = false;
+        return;
+      }
+
+      skipNextCanvasClick = true;
+      const sx = (Math.min(cx, boxSelectStartX) - panX) / canvasZoom;
+      const sy = (Math.min(cy, boxSelectStartY) - panY) / canvasZoom;
+      const ex = (Math.max(cx, boxSelectStartX) - panX) / canvasZoom;
+      const ey = (Math.max(cy, boxSelectStartY) - panY) / canvasZoom;
+
+      const matched = modules.filter(mod => {
+        const modCx = mod.x + (mod.width * SCALE) / 2;
+        const modCy = mod.y + (mod.height * SCALE) / 2;
+        return modCx >= sx && modCx <= ex && modCy >= sy && modCy <= ey;
+      });
+
+      if (matched.length === 1) {
+        if (matched[0].gid) {
+          expandSelectionForGid(matched[0].gid);
+        } else {
+          selectModule(matched[0].uid);
+        }
+      } else if (matched.length > 1) {
+        applyMultiSelection(matched.map(m => m.uid));
+        // 擴展所有被框選到的 gid 群組
+        const gids = new Set(matched.filter(m => m.gid).map(m => m.gid));
+        gids.forEach(gid => expandSelectionForGid(gid));
+        showToast(`已選取 ${selectedUids.size} 個模塊`);
+      } else {
+        selectModule(null);
+      }
+    };
+
+    canvasEl.addEventListener('touchmove', onTouchMove, { passive: true });
+    canvasEl.addEventListener('touchend', onTouchEnd, { passive: true });
+  }, { passive: true });
+}
+
+function handleCanvasClick(e) {
+  if (skipNextCanvasClick) {
+    skipNextCanvasClick = false;
+    return;
+  }
+  // 點擊畫布空白處：取消所有選取（含多選）
+  closeAllColorPopups();
+  clearMultiSelection();
+  selectModule(null);
+}
+
+// ==========================================
+// 4. 拖拽引擎 (支援滑鼠與觸控、多選群組拖拽)
+// ==========================================
+function startDrag(e, mod) {
+  // 判斷是否為多選群組拖拽
+  const isGroupDrag = selectedUids.size > 1 && selectedUids.has(mod.uid);
+
+  isDragging = true;
+  let hasDragged = false;
+  dragStartX = e.clientX;
+  dragStartY = e.clientY;
+  moduleStartX = mod.x;
+  moduleStartY = mod.y;
+
+  // 記錄群組中每個模塊的起始位置
+  let groupStartPositions = [];
+  if (isGroupDrag) {
+    groupStartPositions = [...selectedUids].map(uid => {
+      const m = modules.find(x => x.uid === uid);
+      return m ? { uid, x: m.x, y: m.y } : null;
+    }).filter(Boolean);
+  }
+
+  // 記錄拖曳開始時，緊鄰此屏風的轉柱 uid（供放開後對舊鄰居觸發重新計算）
+  const SCREEN_IDS_DRAG = new Set(['P3N-LSIDE', 'P3N-RSIDE', 'P3N-BPANEL', 'P3N-SIDE-N']);
+  const prevNeighborPostUids = new Set();
+  const collectNeighborPosts = (bpanel) => {
+    if (!bpanel || bpanel.id !== 'P3N-BPANEL') return;
+    let groupLeft  = bpanel.x;
+    let groupRight = bpanel.x + bpanel.width * SCALE;
+    let groupTop   = bpanel.y;
+    let groupBot   = bpanel.y + bpanel.height * SCALE;
+    if (bpanel.gid) {
+      modules.forEach(m => {
+        if (m.gid !== bpanel.gid) return;
+        groupLeft  = Math.min(groupLeft,  m.x);
+        groupRight = Math.max(groupRight, m.x + m.width  * SCALE);
+        groupTop   = Math.min(groupTop,   m.y);
+        groupBot   = Math.max(groupBot,   m.y + m.height * SCALE);
+      });
+    }
+    modules.forEach(m => {
+      if (m.id !== 'P3N-POST') return;
+      const postRight = m.x + m.width * SCALE;
+      const overlaps  = m.y < groupBot && (m.y + m.height * SCALE) > groupTop;
+      if (!overlaps) return;
+      const isLeft  = Math.abs(postRight  - groupLeft)  <= SNAP_ADJ_TOLERANCE;
+      const isRight = Math.abs(groupRight - m.x)        <= SNAP_ADJ_TOLERANCE;
+      if (isLeft || isRight) prevNeighborPostUids.add(m.uid);
+    });
+  };
+  if (!isGroupDrag && SCREEN_IDS_DRAG.has(mod.id)) {
+    const bp = mod.id === 'P3N-BPANEL'
+      ? mod
+      : (mod.gid ? modules.find(m => m.gid === mod.gid && m.id === 'P3N-BPANEL') : null);
+    collectNeighborPosts(bp);
+  } else if (isGroupDrag) {
+    selectedUids.forEach(uid => {
+      const m = modules.find(mo => mo.uid === uid);
+      if (m && m.id === 'P3N-BPANEL') collectNeighborPosts(m);
+    });
+  }
+
+  const moveHandler = (evt) => {
+    if (!isDragging) return;
+    // 觸控拖曳時阻止頁面捲動
+    if (evt.cancelable && evt.touches) evt.preventDefault();
+    const clientX = evt.clientX !== undefined ? evt.clientX : (evt.touches && evt.touches[0].clientX);
+    const clientY = evt.clientY !== undefined ? evt.clientY : (evt.touches && evt.touches[0].clientY);
+
+    if (clientX === undefined || clientY === undefined) return;
+
+    // 除以縮放比例，轉為邏輯像素偏移
+    const dx = (clientX - dragStartX) / canvasZoom;
+    const dy = (clientY - dragStartY) / canvasZoom;
+
+    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+      hasDragged = true;
+    }
+
+    const canvasEl = document.getElementById('canvas');
+    // 邏輯邊界（模塊坐標空間），需依目前畫布平移量換算出「目前可視範圍」
+    const viewMinX = -panX / canvasZoom;
+    const viewMinY = -panY / canvasZoom;
+    const viewMaxX = viewMinX + canvasEl.clientWidth / canvasZoom;
+    const viewMaxY = viewMinY + canvasEl.clientHeight / canvasZoom;
+
+    if (isGroupDrag) {
+      // 群組拖拽：先算出各模塊暫定位置，再對整個群組的邊界框做吸附
+      const tentative = groupStartPositions.map(({ uid, x: sx, y: sy }) => {
+        const m = modules.find(mo => mo.uid === uid);
+        if (!m) return null;
+        const wPx = m.width * SCALE;
+        const hPx = m.height * SCALE;
+        return { m, x: Math.min(Math.max(viewMinX, sx + dx), viewMaxX - wPx), y: Math.min(Math.max(viewMinY, sy + dy), viewMaxY - hPx) };
+      }).filter(Boolean);
+
+      // 計算群組邊界框
+      let gMinX = Infinity, gMinY = Infinity, gMaxX = -Infinity, gMaxY = -Infinity;
+      tentative.forEach(({ m, x, y }) => {
+        gMinX = Math.min(gMinX, x);
+        gMinY = Math.min(gMinY, y);
+        gMaxX = Math.max(gMaxX, x + m.width * SCALE);
+        gMaxY = Math.max(gMaxY, y + m.height * SCALE);
+      });
+      // 暫時套用位置，讓 getModuleWorldVertices 能讀取到拖曳後的座標
+      const savedPositions = tentative.map(({ m }) => ({ m, ox: m.x, oy: m.y }));
+      tentative.forEach(({ m, x, y }) => { m.x = x; m.y = y; });
+      const draggedModsList = tentative.map(t => t.m);
+      const snap = getSnapDelta(gMinX, gMinY, gMaxX - gMinX, gMaxY - gMinY, selectedUids, draggedModsList);
+      // 還原（後面會加上 snap.dx/dy 再正式設定）
+      savedPositions.forEach(({ m, ox, oy }) => { m.x = ox; m.y = oy; });
+
+      tentative.forEach(({ m, x, y }) => {
+        m.x = x + snap.dx;
+        m.y = y + snap.dy;
+        // 切線對齊：在法線吸附發生後，若偏移量在容許範圍內才套用
+        const tLen = Math.sqrt(snap.tdx * snap.tdx + snap.tdy * snap.tdy);
+        if (tLen > 0 && tLen <= TANGENT_SNAP_THRESHOLD / canvasZoom) {
+          m.x += snap.tdx;
+          m.y += snap.tdy;
+        }
+        updateModuleDOMPosition(m);
+      });
+    } else {
+      // 單選拖拽
+      const wPx = mod.width * SCALE;
+      const hPx = mod.height * SCALE;
+      let nx = Math.min(Math.max(viewMinX, moduleStartX + dx), viewMaxX - wPx);
+      let ny = Math.min(Math.max(viewMinY, moduleStartY + dy), viewMaxY - hPx);
+
+      // 先暫時更新模塊位置，讓 getModuleWorldVertices 能讀取到最新座標
+      const origX = mod.x, origY = mod.y;
+      mod.x = nx; mod.y = ny;
+      const snap = getSnapDelta(nx, ny, wPx, hPx, new Set([mod.uid]), [mod]);
+      mod.x = origX; mod.y = origY; // 還原，讓後面統一設定
+
+      nx += snap.dx;
+      ny += snap.dy;
+      // 切線對齊：在法線吸附發生後，若偏移量在容許範圍內才套用
+      const tLen = Math.sqrt(snap.tdx * snap.tdx + snap.tdy * snap.tdy);
+      if (tLen > 0 && tLen <= TANGENT_SNAP_THRESHOLD / canvasZoom) {
+        nx += snap.tdx;
+        ny += snap.tdy;
+      }
+
+      mod.x = nx;
+      mod.y = ny;
+      updateModuleDOMPosition(mod);
+    }
+  };
+
+  const upHandler = () => {
+    isDragging = false;
+    skipNextCanvasClick = true;
+    document.removeEventListener("mousemove", moveHandler);
+    document.removeEventListener("mouseup", upHandler);
+    document.removeEventListener("touchmove", moveHandler);
+    document.removeEventListener("touchend", upHandler);
+
+    // 轉柱放開後，依鄰接屏風模塊自動同步高度
+    if (!isGroupDrag && mod.id === 'P3N-POST') {
+      syncPostHeightToNeighbors(mod);
+    }
+
+    // 屏風模塊放開後，同步緊鄰轉柱高度
+    const SCREEN_IDS = new Set(['P3N-LSIDE', 'P3N-RSIDE', 'P3N-BPANEL', 'P3N-SIDE-N']);
+    if (!isGroupDrag && SCREEN_IDS.has(mod.id)) {
+      // 單選：取 mod 所屬 gid 的 BPANEL，或 mod 本身（若已是 BPANEL）
+      const bp = mod.id === 'P3N-BPANEL'
+        ? mod
+        : (mod.gid ? modules.find(m => m.gid === mod.gid && m.id === 'P3N-BPANEL') : null);
+      if (bp) syncNeighborPosts(bp);
+    } else if (isGroupDrag) {
+      // 群組拖曳：對 selectedUids 內所有 BPANEL 觸發
+      selectedUids.forEach(uid => {
+        const m = modules.find(mo => mo.uid === uid);
+        if (m && m.id === 'P3N-BPANEL') syncNeighborPosts(m);
+      });
+    }
+
+    // 對拖曳前的舊鄰居轉柱重新計算：屏風離開後鄰居狀態已更新，
+    // 讓轉柱依剩餘鄰居（或無鄰居）自動降回較低高度或預設值
+    prevNeighborPostUids.forEach(uid => {
+      const post = modules.find(m => m.uid === uid);
+      if (post) syncPostHeightToNeighbors(post);
+    });
+  };
+
+  document.addEventListener('mousemove', moveHandler);
+  document.addEventListener('mouseup', upHandler);
+  // passive: false 確保 iOS Safari 不會搶奪觸控使頁面捲動
+  document.addEventListener('touchmove', moveHandler, { passive: false });
+  document.addEventListener('touchend', upHandler);
+}
+
+// ==========================================
+// 5. 元件控制指令（刪除/清空）
+// ==========================================
+function deleteSelected() {
+  const toDelete = new Set();
+  if (selectedUid !== null) toDelete.add(selectedUid);
+  selectedUids.forEach(uid => toDelete.add(uid));
+
+  if (toDelete.size === 0) {
+    showToast('請先選取要刪除的模塊');
+    return;
+  }
+
+  // gid 群組：若只選到部分成員，自動補齊整組一起刪除
+  const gidsToDelete = new Set(
+    [...toDelete].map(uid => modules.find(m => m.uid === uid)?.gid).filter(Boolean)
+  );
+  gidsToDelete.forEach(gid => {
+    modules.filter(m => m.gid === gid).forEach(m => toDelete.add(m.uid));
+  });
+
+  toDelete.forEach(uid => {
+    const div = document.getElementById(`mod-${uid}`);
+    if (div) div.remove();
+    modules = modules.filter(m => m.uid !== uid);
+  });
+
+  selectedUid = null;
+  selectedUids.clear();
+
+  renderTable();
+  updateEmptyHint();
+  showToast(`已刪除 ${toDelete.size} 個模塊`);
+}
+
+function clearCanvas() {
+  if (modules.length === 0) {
+    showToast('畫布已是空的');
+    return;
+  }
+  if (!confirm('確定要清空所有配置嗎？')) return;
+
+  modules.forEach(mod => {
+    const div = document.getElementById(`mod-${mod.uid}`);
+    if (div) div.remove();
+  });
+  modules = [];
+  selectedUid = null;
+  selectedUids.clear();
+
+  renderTable();
+  updateEmptyHint();
+  showToast('已清空所有配置');
+}
+
+// ==========================================
+// 6. 配置清單表格與 CSV 匯出
+// ==========================================
+function updateEmptyHint() {
+  const hint = document.getElementById('empty-hint');
+  if (hint) hint.style.display = modules.length === 0 ? '' : 'none';
+}
+
+/**
+ * 依 mod.useEdge 切換 LSIDE / RSIDE 的畫布 SVG，
+ * 並同步更新模塊寬度（收邊 40mm ↔ 不收邊 32mm）與群組內相鄰模塊位置。
+ */
+function refreshSideEdgeSVG(mod) {
+  if (mod.id !== 'P3N-LSIDE' && mod.id !== 'P3N-RSIDE') return;
+
+  // ── 1. 更新寬度資料（mm → 邏輯像素）──
+  const newWidthMM = mod.useEdge ? 40 : 32;
+  const oldWidthPx = mod.width * SCALE;
+  mod.width = newWidthMM;
+  const newWidthPx = mod.width * SCALE;
+
+  // ── 2. 更新 DOM 尺寸 ──
+  const div = document.getElementById(`mod-${mod.uid}`);
+  if (div) div.style.width = `${newWidthPx}px`;
+
+  // ── 3. 更新 SVG 圖示 ──
+  const imgEl = document.getElementById(`img-${mod.uid}`);
+  if (imgEl) {
+    const rawSvg = getEffectiveModuleSVG(mod);
+    const svgSrc = rawSvg.replace(/<svg([^>]*)>/, (m, attrs) => {
+      if (/preserveAspectRatio/.test(attrs)) return m;
+      return `<svg${attrs} preserveAspectRatio="none">`;
+    });
+    imgEl.src = URL.createObjectURL(new Blob([svgSrc], { type: 'image/svg+xml' }));
+  }
+
+  // ── 4. 群組內同步相鄰模塊 x 座標 ──
+  if (!mod.gid) return;
+  const lside  = modules.find(m => m.gid === mod.gid && m.id === 'P3N-LSIDE');
+  const bpanel = modules.find(m => m.gid === mod.gid && m.id === 'P3N-BPANEL');
+  const rside  = modules.find(m => m.gid === mod.gid && m.id === 'P3N-RSIDE');
+  if (!lside || !bpanel || !rside) return;
+
+  const delta = newWidthPx - oldWidthPx;
+
+  if (mod.id === 'P3N-LSIDE') {
+    // LSIDE 寬度變動 → BPANEL 和 RSIDE 向右/左位移
+    bpanel.x += delta;
+    rside.x  += delta;
+    updateModuleDOMPosition(bpanel);
+    updateModuleDOMPosition(rside);
+  } else {
+    // RSIDE 寬度變動 → 只更新自身位置（x 不變，寬度從右側展開）
+    // 維持 RSIDE 左緣緊貼 BPANEL 右緣
+    rside.x = bpanel.x + bpanel.width * SCALE;
+    updateModuleDOMPosition(rside);
+  }
+}
+
+/**
+ * 更新模塊的訂製高度：重新計算 height、更新 DOM 尺寸、重繪 SVG
+ */
+/**
+ * 當轉柱（P3N-POST）高度改變後，同步更新配置清單的型號欄與 note 欄。
+ * 若新高度非標準規格，型號留空並在 note 加入「訂製轉柱」；
+ * 若改回標準規格，移除 note 中的「訂製轉柱」標記。
+ */
+/**
+ * checkbox 切換後，即時更新群組列的名稱欄與型號欄（收邊條顯示邏輯）。
+ */
+function syncGroupRowSideId(bpanel, lside, rside, tdName, tdId, overrideH) {
+  const hasEdge = (lside && lside.useEdge !== false) || (rside && rside.useEdge !== false);
+  const edgeCount = ((lside && lside.useEdge !== false) ? 1 : 0) + ((rside && rside.useEdge !== false) ? 1 : 0);
+  const panelH = overrideH != null ? overrideH : calcBPanelTotalH(bpanel);
+  const panelW = bpanel.customWidth || 700;
+  const sideId = hasEdge ? getSideDisplayId(panelH) : '';
+  const isCustomSide = hasEdge && sideId === '';
+
+  // 同步 BPANEL 自身型號
+  const bpanelDisplayId = getBPanelDisplayId(panelH, panelW);
+
+  // 同步 bpanel.note（含訂製面板標記 + 訂製收邊條標記）
+  let note = (bpanel.note || '')
+    .replace(/\s*訂製收邊條/g, '')
+    .replace(/\s*訂製面板高度/g, '')
+    .replace(/\s*訂製面板寬度/g, '')
+    .trim();
+  const customPanelNote = getBPanelCustomNote(panelH, panelW);
+  if (customPanelNote) note = note ? note + ' ' + customPanelNote : customPanelNote;
+  if (hasEdge && isCustomSide) note = note ? note + ' 訂製收邊條' : '訂製收邊條';
+  bpanel.note = note;
+  const noteEl = document.getElementById(`note-${bpanel.uid}`);
+  if (noteEl) noteEl.value = bpanel.note;
+
+  // 同步名稱欄、型號欄
+  if (hasEdge) {
+    tdName.innerHTML = `<span style="display:block;">屏風模塊</span><span style="display:block;color:var(--text-secondary);font-size:11px;">收邊條工本費</span>`;
+    tdId.innerHTML = `<span style="display:block;">${bpanelDisplayId}</span><span style="display:block;color:var(--text-secondary);font-size:11px;">${sideId}</span>`;
+  } else {
+    tdName.textContent = '屏風模塊';
+    tdId.textContent = bpanelDisplayId;
+  }
+
+  // 同步數量欄
+  const tdQty = document.getElementById(`tdqty-group-${bpanel.uid}`);
+  if (tdQty) {
+    if (edgeCount > 0) {
+      tdQty.innerHTML = `<span style="display:block;">1</span><span style="display:block;color:var(--text-secondary);font-size:11px;">${edgeCount}</span>`;
+    } else {
+      tdQty.textContent = '1';
+    }
+  }
+}
+
+function syncPostTableRow(mod) {
+  if (mod.id !== 'P3N-POST') return;
+  const newId = getPostDisplayId(mod.customHeight || mod.height);
+  const isCustom = newId === '';
+
+  // 同步 mod.note：加/移除「訂製轉柱」標記
+  let note = (mod.note || '').replace(/\s*訂製轉柱/g, '').trim();
+  if (isCustom) note = note ? note + ' 訂製轉柱' : '訂製轉柱';
+  mod.note = note;
+
+  // 更新型號欄 DOM
+  const tdId = document.getElementById(`tdid-${mod.uid}`);
+  if (tdId) tdId.textContent = newId;
+
+  // 更新 note 欄 DOM
+  const noteEl = document.getElementById(`note-${mod.uid}`);
+  if (noteEl) noteEl.value = mod.note;
+}
+
+function refreshModuleHeight(mod, newHeightMM) {
+  // 最小高度限制：至少 50mm（帽頭本身很薄，以 mm 計算下限即可）
+  const clampedH = Math.max(50, Math.round(newHeightMM));
+  mod.customHeight = clampedH;
+  mod.height = clampedH;
+  mod.spec = mod.spec.replace(/H\d+/, `H${clampedH}`);
+
+  // 更新畫布上的 DOM 元素尺寸
+  const div = document.getElementById(`mod-${mod.uid}`);
+  if (div) {
+    div.style.height = `${clampedH * SCALE}px`;
+    // 重新生成 SVG
+    const imgEl = document.getElementById(`img-${mod.uid}`);
+    if (imgEl) {
+      const rawSvg = getEffectiveModuleSVG(mod);
+      const svgSrc = rawSvg.replace(/<svg([^>]*)>/, (m, attrs) => {
+        if (/preserveAspectRatio/.test(attrs)) return m;
+        return `<svg${attrs} preserveAspectRatio="none">`;
+      });
+      const blob = new Blob([svgSrc], { type: 'image/svg+xml' });
+      imgEl.src = URL.createObjectURL(blob);
+    }
+  }
+}
+
+/**
+ * 依 mod.panelHeights 重新生成 P3N-BPANEL 的 SVG 並更新畫布 DOM。
+ *
+ * mod.height（mm）= 固定區換算mm + 各片白色高度加總
+ *   固定區 SVG單位 = GRP_START(3.33) + n*REL_WHITE_Y(4.26) + BOT_H(2.83) + 0.5
+ *   換算比例 SVG_PER_MM = 201.5 / 750
+ */
+function refreshBPanelSVG(mod) {
+  const heights = (Array.isArray(mod.panelHeights) && mod.panelHeights.length)
+    ? mod.panelHeights : [{ h: 708, color: '#ffffff', opacity: 1, material: '平面烤漆' }];
+  mod.panelHeights = heights;
+
+  // 計算 mod.height（mm）：固定區換算 + 各片白色高度
+  const SVG_PER_MM = 201.5 / 750;
+  const fixedSVG   = 3.33 + heights.length * 4.26 + 2.83 + 0.5;
+  const fixedMM    = fixedSVG / SVG_PER_MM;
+  const whiteMM    = heights.reduce((sum, p) => sum + ((typeof p === 'object') ? p.h : p), 0);
+  mod.height = Math.round(fixedMM + whiteMM);
+
+  // 同步更新 spec 的 H 值（面板總高）
+  const _bpTotalH = getBPanelTotalH(mod);
+  mod.spec = mod.spec.replace(/H\d+/, `H${_bpTotalH}`);
+
+  // 更新畫布 DOM
+  const div = document.getElementById(`mod-${mod.uid}`);
+  if (div) {
+    div.style.height = `${mod.height * SCALE}px`;
+    const imgEl = document.getElementById(`img-${mod.uid}`);
+    if (imgEl) {
+      const rawSvg = generateBPanelSVG(heights, mod.customWidth || 700, mod.edgeColor);
+      const svgSrc = rawSvg.replace(/<svg([^>]*)>/, (m, attrs) => {
+        if (/preserveAspectRatio/.test(attrs)) return m;
+        return `<svg${attrs} preserveAspectRatio="none">`;
+      });
+      const blob = new Blob([svgSrc], { type: 'image/svg+xml' });
+      imgEl.src = URL.createObjectURL(blob);
+    }
+  }
+
+  // 若為屏風模塊群組的 BPANEL，同步 LSIDE/RSIDE 高度
+  if (mod.gid) syncGidSidePanels(mod);
+
+  // 同步緊鄰轉柱高度（面板總高變更後立即更新，高度未變則內部略過）
+  syncNeighborPosts(mod);
+}
+
+/**
+ * 當 gid 群組中的 BPANEL 高度變動時，
+ * 同步更新同群組的 LSIDE / RSIDE 的 customHeight、height 及畫布 DOM。
+ */
+function syncGidSidePanels(bpanel) {
+  if (!bpanel.gid) return;
+  const newH = bpanel.height; // mm
+  modules.forEach(m => {
+    if (m.gid !== bpanel.gid || m.uid === bpanel.uid) return;
+    if (m.id !== 'P3N-LSIDE' && m.id !== 'P3N-RSIDE') return;
+    m.customHeight = newH;
+    m.height = newH;
+    const sideDiv = document.getElementById(`mod-${m.uid}`);
+    if (sideDiv) {
+      sideDiv.style.height = `${newH * SCALE}px`;
+      // 重繪 SVG（高度改變）
+      const imgEl = document.getElementById(`img-${m.uid}`);
+      if (imgEl) {
+        const rawSvg = getEffectiveModuleSVG(m);
+        const svgSrc = rawSvg.replace(/<svg([^>]*)>/, (mt, attrs) => {
+          if (/preserveAspectRatio/.test(attrs)) return mt;
+          return `<svg${attrs} preserveAspectRatio="none">`;
+        });
+        const blob = new Blob([svgSrc], { type: 'image/svg+xml' });
+        imgEl.src = URL.createObjectURL(blob);
+      }
+    }
+  });
+}
+
+/**
+ * 收邊色變更後，重繪同 gid 群組中 LSIDE / RSIDE 的畫布 SVG。
+ * 資料已由呼叫端寫入 bpanel.edgeColor，此函式只負責 DOM 更新。
+ */
+function refreshEdgeColorSVG(bpanel) {
+  if (!bpanel.gid) return;
+  // 重繪同 gid 的 LSIDE / RSIDE，以及 BPANEL 自身的頂部橫條
+  modules.forEach(m => {
+    if (m.gid !== bpanel.gid) return;
+    if (m.id !== 'P3N-LSIDE' && m.id !== 'P3N-RSIDE' && m.id !== 'P3N-BPANEL') return;
+    const imgEl = document.getElementById(`img-${m.uid}`);
+    if (!imgEl) return;
+    const rawSvg = getEffectiveModuleSVG(m);
+    const svgSrc = rawSvg.replace(/<svg([^>]*)>/, (mt, attrs) => {
+      if (/preserveAspectRatio/.test(attrs)) return mt;
+      return `<svg${attrs} preserveAspectRatio="none">`;
+    });
+    const blob = new Blob([svgSrc], { type: 'image/svg+xml' });
+    imgEl.src = URL.createObjectURL(blob);
+  });
+}
+
+/**
+ * 更新模塊的訂製寬度：重新計算 width、更新 DOM 尺寸、重繪 SVG
+ * 目前僅 P3N-BPANEL 支援（widthCustomizable = true）
+ */
+function refreshModuleWidth(mod, newWidthMM) {
+  const clamped = Math.max(200, Math.min(1800, Math.round(newWidthMM)));
+  mod.customWidth = clamped;
+
+  // width（邏輯像素）= 原始 700mm 對應 636px → 等比換算
+  const W_RATIO = 636 / 700;
+  mod.width = Math.round(clamped * W_RATIO);
+
+  // 更新 spec 中的 W 欄位，並確保 H 使用面板總高
+  const _rwTotalH = (mod.id === 'P3N-BPANEL') ? getBPanelTotalH(mod) : null;
+  if (_rwTotalH !== null) {
+    mod.spec = mod.spec.replace(/H\d+/, `H${_rwTotalH}`);
+  }
+  mod.spec = mod.spec.replace(/W\d+/, `W${clamped}`);
+
+  // 更新畫布 DOM 寬度
+  const div = document.getElementById(`mod-${mod.uid}`);
+  if (div) {
+    div.style.width = `${mod.width * SCALE}px`;
+    // 重繪 SVG（寬度變動時面板主體 viewBox 需重算）
+    const imgEl = document.getElementById(`img-${mod.uid}`);
+    if (imgEl) {
+      const rawSvg = getEffectiveModuleSVG(mod);
+      const svgSrc = rawSvg.replace(/<svg([^>]*)>/, (m, attrs) => {
+        if (/preserveAspectRatio/.test(attrs)) return m;
+        return `<svg${attrs} preserveAspectRatio="none">`;
+      });
+      const blob = new Blob([svgSrc], { type: 'image/svg+xml' });
+      imgEl.src = URL.createObjectURL(blob);
+    }
+  }
+
+  // 同步更新配置清單（先更新清單，再同步位置，避免 DOM 重建干擾座標）
+  renderTable();
+
+  // 若為屏風模塊群組的 BPANEL，同步 RSIDE 的 x 座標（BPANEL 寬度變動時 RSIDE 需位移）
+  if (mod.gid) {
+    const rside = modules.find(m => m.gid === mod.gid && m.id === 'P3N-RSIDE');
+    if (rside) {
+      rside.x = mod.x + mod.width * SCALE;
+      updateModuleDOMPosition(rside);
+    }
+  }
+}
+
+// ==========================================
+// 面板選色器 UI 建構函式
+// ==========================================
+
+// 預設色票（hex + opacity 組合）
+const PANEL_COLORS = [
+  { hex: '#ffffff', opacity: 1    },
+  { hex: '#d9d8d4', opacity: 1    },
+  { hex: '#4a4a4a', opacity: 1    },
+  { hex: '#e8e28b', opacity: 1    },
+  { hex: '#d1bec7', opacity: 1    },
+  { hex: '#98b080', opacity: 1    },
+  { hex: '#827664', opacity: 1    },
+  { hex: '#c7e3eb', opacity: 0.5  },
+  { hex: '#4a4a4a', opacity: 0.5  },
+];
+
+/**
+ * buildPanelColorCell(mod, idx)
+ * 回傳一個 .color-select div，內含：
+ *   - 色票觸發按鈕（顯示目前色）
+ *   - popup：7 色色票格 + HSL 自訂色面板
+ * 供 rebuildPanelRows 插入每個面板的「顏色列」
+ */
+// 面板材質選項定義
+const PANEL_MATERIALS = ['平面烤漆', '波音軟片', '霧面玻璃', '灰玻璃', '條砂玻璃'];
+// 玻璃材質：顏色固定，不可選色
+const PANEL_MATERIAL_GLASS = {
+  '霧面玻璃':  { hex: '#c7e3eb', opacity: 0.5 },
+  '條砂玻璃':  { hex: '#c7e3eb', opacity: 0.5 },
+  '灰玻璃':    { hex: '#4a4a4a', opacity: 0.5 },
+};
+
+function buildPanelColorCell(mod, idx) {
+  const panel = mod.panelHeights[idx] || {};
+  const material = panel.material || '平面烤漆';
+  const isGlass = !!PANEL_MATERIAL_GLASS[material];
+  const currentColor = panel.color || '#ffffff';
+  const uid = mod.uid;
+
+  // ── 外層 .color-select 容器 ──
+  const wrap = document.createElement('div');
+  wrap.className = 'color-select';
+  wrap.id = `colorSelect-${idx}-${uid}`;
+
+  // ── 觸發按鈕（色塊小方塊）──
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'color-swatch-btn';
+  btn.id = `colorBtn-${idx}-${uid}`;
+  const _initOpacity = panel.opacity != null ? panel.opacity : 1;
+  btn.style.background = currentColor;
+  btn.style.opacity = _initOpacity;
+  btn.title = isGlass ? '玻璃材質不可選色' : '點擊選色';
+  if (isGlass) {
+    btn.style.cursor = 'not-allowed';
+    btn.disabled = true;
+  } else {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleColorPopup(uid, idx);
+    });
+  }
+
+  if (!isGlass) {
+    // ── 彈出色盤 ──
+    const popup = document.createElement('div');
+    popup.className = 'color-popup';
+    popup.id = `colorPopup-${idx}-${uid}`;
+    popup.addEventListener('click', e => e.stopPropagation());
+
+    // 色票格：只顯示 opacity === 1 的 7 色
+    const swatchGrid = document.createElement('div');
+    swatchGrid.className = 'color-swatch-grid';
+    const currentOpacity = panel.opacity != null ? panel.opacity : 1;
+    PANEL_COLORS.filter(c => c.opacity === 1).forEach(({ hex, opacity }) => {
+      const opt = document.createElement('button');
+      opt.type = 'button';
+      const isSelected = currentColor.toLowerCase() === hex.toLowerCase();
+      opt.className = 'color-swatch-option' + (isSelected ? ' selected' : '');
+      opt.style.cssText = `background:${hex};opacity:1;`;
+      opt.dataset.color = hex;
+      opt.dataset.opacity = opacity;
+      opt.title = hex;
+      opt.addEventListener('click', (e) => {
+        e.stopPropagation();
+        setPanelColor(uid, idx, hex, 1);
+      });
+      swatchGrid.appendChild(opt);
+    });
+    popup.appendChild(swatchGrid);
+
+    // HSL 自訂色面板
+    appendHslPicker(popup, uid, idx, currentColor, (hex) => {
+      setPanelColor(uid, idx, hex, 1);
+    });
+
+    wrap.appendChild(btn);
+    wrap.appendChild(popup);
+  } else {
+    wrap.appendChild(btn);
+  }
+  return wrap;
+}
+
+function renderTable() {
+  const tbody = document.getElementById('table-body');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  if (isAggregated) {
+    // 彙整模式：依「型號 + 訂製高度 + 訂製寬度 + 註記」聚合
+    const map = new Map();
+    modules.forEach(mod => {
+      // LSIDE / RSIDE 跳過，收邊條由 BPANEL 迭代時補入
+      if (mod.id === 'P3N-LSIDE' || mod.id === 'P3N-RSIDE') return;
+
+      const hLabel = mod.heightCustomizable ? (mod.customHeight || mod.height) : null;
+      const wLabel = mod.widthCustomizable ? (mod.customWidth || null) : null;
+      const key = mod.id + '|' + (hLabel||'') + '|' + (wLabel||'') + '|' + (mod.note || '');
+      if (map.has(key)) {
+        map.get(key).qty++;
+      } else {
+        const _dispName = mod.id === 'P3N-POST' ? '轉柱工本費' : mod.name;
+        let _dispId, _dispNote;
+        if (mod.id === 'P3N-POST') {
+          _dispId = getPostDisplayId(hLabel || mod.height);
+          _dispNote = (_dispId === '') ? (mod.note ? mod.note + ' 訂製轉柱' : '訂製轉柱') : (mod.note || '');
+        } else if (mod.id === 'P3N-BPANEL') {
+          const _aggH = calcBPanelTotalH(mod);
+          const _aggW = mod.customWidth || 700;
+          _dispId = getBPanelDisplayId(_aggH, _aggW);
+          _dispNote = mod.note || '';
+        } else {
+          _dispId = mod.id;
+          _dispNote = mod.note || '';
+        }
+        map.set(key, { name: _dispName, id: _dispId, spec: mod.spec, qty: 1, note: _dispNote, hLabel, wLabel });
+      }
+
+      // BPANEL：各片面板材質各自計算
+      if (mod.id === 'P3N-BPANEL') {
+        getPanelMatRows(mod).forEach(row => {
+          const matKey = 'MAT|' + row.id + '|' + row.spec + '|' + row.note;
+          if (map.has(matKey)) {
+            map.get(matKey).qty += row.qty;
+          } else {
+            map.set(matKey, { name: row.name, id: row.id, spec: row.spec, qty: row.qty, note: row.note, hLabel: null, wLabel: null });
+          }
+        });
+      }
+
+      // BPANEL：左右收邊各自計算，各 +1
+      if (mod.id === 'P3N-BPANEL' && mod.gid) {
+        const ls = modules.find(m => m.gid === mod.gid && m.id === 'P3N-LSIDE');
+        const rs = modules.find(m => m.gid === mod.gid && m.id === 'P3N-RSIDE');
+        const panelH = calcBPanelTotalH(mod);
+        const sideId = getSideDisplayId(panelH);
+        const sideKey = 'SIDE|' + panelH;
+        const edgeCount = ((ls && ls.useEdge !== false) ? 1 : 0) + ((rs && rs.useEdge !== false) ? 1 : 0);
+        if (edgeCount > 0) {
+          if (map.has(sideKey)) {
+            map.get(sideKey).qty += edgeCount;
+          } else {
+            map.set(sideKey, { name: '收邊條工本費', id: sideId, spec: `H${panelH}`, qty: edgeCount, note: sideId === '' ? '訂製收邊條' : '', hLabel: null, wLabel: null });
+          }
+        }
+      }
+    });
+    map.forEach(item => {
+      let specDisplay = item.spec || '';
+      // spec 已含 H/W（如 BPANEL）：直接將數值標橘色，不再額外追加 tag
+      if (specDisplay && /H\d+/.test(specDisplay)) {
+        specDisplay = specDisplay
+          .replace(/(H\d+)/g, '<span style="color:var(--accent);font-weight:600;">$1</span>')
+          .replace(/(W\d+)/g, '<span style="color:var(--accent);font-weight:600;">$1</span>');
+      } else {
+        // 其他模塊：維持原本 hLabel / wLabel tag 邏輯
+        const tags = [];
+        if (item.hLabel != null) tags.push(`H${item.hLabel}`);
+        if (item.wLabel != null) tags.push(`W${item.wLabel}`);
+        if (tags.length) {
+          const tagHtml = tags.map(t => `<span style="color:var(--accent);font-weight:600;">${t}</span>`).join(' ');
+          specDisplay = specDisplay ? `${specDisplay} ${tagHtml}` : tagHtml;
+        }
+      }
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${item.name}</td>
+        <td>${item.id}</td>
+        <td>${specDisplay}</td>
+        <td style="text-align:center;">${item.qty}</td>
+        <td class="edge-cell edge-na">—</td>
+        <td class="note-cell"><span style="font-size:12px;color:#555;padding:4px 6px;display:block;">${item.note}</span></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } else {
+    // 明細模式：每個模塊一行；gid 群組（屏風模塊）三件合併為一行
+    const renderedGids = new Set();
+
+    modules.forEach((mod) => {
+      // gid 群組：LSIDE / RSIDE 跳過，只由 BPANEL 那行代表整組
+      if (mod.gid) {
+        if (mod.id === 'P3N-LSIDE' || mod.id === 'P3N-RSIDE') return;
+        // BPANEL：若此 gid 已渲染過則跳過（防重）
+        if (renderedGids.has(mod.gid)) return;
+        renderedGids.add(mod.gid);
+      }
+
+      // ── 取得同群組的 LSIDE / RSIDE（若有）──
+      const lside = mod.gid ? modules.find(m => m.gid === mod.gid && m.id === 'P3N-LSIDE') : null;
+      const rside = mod.gid ? modules.find(m => m.gid === mod.gid && m.id === 'P3N-RSIDE') : null;
+      const isGroupRow = !!(mod.gid && lside && rside);
+
+      const tr = document.createElement('tr');
+      // 群組列：三件的 row id 都指向同一 tr（選取時高亮整行）
+      tr.id = `row-${mod.uid}`;
+      if (isGroupRow) {
+        tr.dataset.groupRow = mod.gid;
+        if (lside) document.querySelectorAll(`[id="row-${lside.uid}"]`).forEach(el => el.remove()); // 清除舊殘留
+      }
+
+      // 選取高亮（群組：任一成員被選到即高亮）
+      const isSelected = mod.uid === selectedUid
+        || selectedUids.has(mod.uid)
+        || (isGroupRow && (selectedUids.has(lside?.uid) || selectedUids.has(rside?.uid)));
+      if (isSelected) tr.classList.add('multi-selected-row');
+
+      // ── 模塊名稱欄 ──
+      const tdName = document.createElement('td');
+      tdName.dataset.label = '模塊名稱';
+      tdName.textContent = isGroupRow ? '屏風模塊' : (mod.id === 'P3N-POST' ? '轉柱工本費' : mod.name);
+      if (isGroupRow) {
+        const hasEdge = (lside && lside.useEdge !== false) || (rside && rside.useEdge !== false);
+        if (hasEdge) {
+          tdName.innerHTML = `<span style="display:block;">屏風模塊</span><span style="display:block;color:var(--text-secondary);font-size:11px;">收邊條工本費</span>`;
+        }
+      }
+
+      // ── 型號欄 ──
+      const tdId = document.createElement('td');
+      tdId.dataset.label = '型號';
+      if (isGroupRow) {
+        const hasEdge = (lside && lside.useEdge !== false) || (rside && rside.useEdge !== false);
+        const panelH = mod.id === 'P3N-BPANEL' ? calcBPanelTotalH(mod) : (mod.customHeight || mod.height);
+        const panelW = mod.customWidth || 700;
+        const sideId = hasEdge ? getSideDisplayId(panelH) : '';
+        const isCustomSide = hasEdge && sideId === '';
+        const bpanelId = mod.id === 'P3N-BPANEL' ? getBPanelDisplayId(panelH, panelW) : mod.id;
+
+        // 同步 BPANEL note（訂製標記），確保每次 renderTable 都正確
+        if (mod.id === 'P3N-BPANEL') {
+          let _initNote = (mod.note || '')
+            .replace(/\s*訂製收邊條/g, '')
+            .replace(/\s*訂製面板高度/g, '')
+            .replace(/\s*訂製面板寬度/g, '')
+            .trim();
+          const _cpNote = getBPanelCustomNote(panelH, panelW);
+          if (_cpNote) _initNote = _initNote ? _initNote + ' ' + _cpNote : _cpNote;
+          if (hasEdge && isCustomSide) _initNote = _initNote ? _initNote + ' 訂製收邊條' : '訂製收邊條';
+          mod.note = _initNote;
+        }
+
+        if (hasEdge) {
+          tdId.innerHTML = `<span style="display:block;">${bpanelId}</span><span style="display:block;color:var(--text-secondary);font-size:11px;">${sideId}</span>`;
+        } else {
+          tdId.textContent = bpanelId;
+        }
+        tdId.id = `tdid-group-${mod.uid}`;
+      } else if (mod.id === 'P3N-POST') {
+        const postH = mod.customHeight || mod.height;
+        tdId.id = `tdid-${mod.uid}`;
+        tdId.textContent = getPostDisplayId(postH);
+      } else {
+        tdId.textContent = mod.id;
+      }
+
+      // ── 規格欄：合併訂製高度輸入框 ──
+      const tdSpec = document.createElement('td');
+      tdSpec.dataset.label = '規格 (mm)';
+      tdSpec.id = `spec-${mod.uid}`;
+      if (mod.heightCustomizable) {
+        // 上行顯示靜態規格文字（寬度部分），下行顯示高度輸入框
+        tdSpec.style.cssText = 'vertical-align:middle; padding: 4px 8px;';
+        const staticSpec = mod.spec.replace(/H\d+/, '').replace(/^\*|\*$/g,'');
+        if (staticSpec) {
+          tdSpec.innerHTML = `<div style="font-size:11px;color:var(--text-secondary);margin-bottom:3px;">${staticSpec}</div>`;
+        }
+        const heightWrap = document.createElement('div');
+        heightWrap.style.cssText = 'display:flex;align-items:center;gap:4px;';
+        const prefix = document.createElement('span');
+        prefix.style.cssText = 'font-size:12px;color:var(--text-secondary);white-space:nowrap;';
+        prefix.textContent = 'H =';
+        const heightInput = document.createElement('input');
+        heightInput.type = 'number';
+        heightInput.min = '50';
+        heightInput.max = '3000';
+        heightInput.step = '1';
+        heightInput.value = mod.customHeight || mod.height;
+        heightInput.style.cssText = `
+          width: 60px; padding: 2px 5px;
+          border: 1px solid var(--border); border-radius: 5px;
+          font-size: 12px; font-family: inherit;
+          text-align: center; color: var(--accent);
+          font-weight: 600; background: var(--accent-light);
+          outline: none; transition: border-color 0.15s;
+        `;
+        const unit = document.createElement('span');
+        unit.style.cssText = 'font-size:11px;color:var(--text-muted);';
+        unit.textContent = 'mm';
+        heightInput.addEventListener('focus', () => {
+          heightInput.style.borderColor = 'var(--accent)';
+          heightInput.style.boxShadow = '0 0 0 2px rgba(212,97,58,0.15)';
+        });
+        heightInput.addEventListener('blur', () => {
+          heightInput.style.borderColor = 'var(--border)';
+          heightInput.style.boxShadow = '';
+          const val = parseInt(heightInput.value, 10);
+          if (!isNaN(val) && val !== mod.customHeight) {
+            refreshModuleHeight(mod, val);
+            heightInput.value = mod.customHeight;
+            if (mod.id === 'P3N-POST') syncPostTableRow(mod);
+          }
+        });
+        heightInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') heightInput.blur();
+        });
+        heightWrap.appendChild(prefix);
+        heightWrap.appendChild(heightInput);
+        heightWrap.appendChild(unit);
+
+        // 轉柱：在高度輸入框右側加入選色器
+        if (mod.id === 'P3N-POST') {
+          const colorSep = document.createElement('span');
+          colorSep.style.cssText = 'font-size:11px;color:var(--text-muted);margin-left:4px;';
+          colorSep.textContent = '顏色';
+          const postColorCell = buildPostColorCell(mod);
+          heightWrap.appendChild(colorSep);
+          heightWrap.appendChild(postColorCell);
+        }
+
+        tdSpec.appendChild(heightWrap);
+      } else if (mod.id === 'P3N-BPANEL') {
+        // P3N-BPANEL：每片面板獨立高度輸入 + 增減面板按鈕
+        tdSpec.style.cssText = 'vertical-align:top; padding: 4px 8px; overflow:hidden; min-width:0;';
+
+        // 重繪所有面板輸入列的函式（＋／－ 按鈕點擊後呼叫）
+        // 注入 drop 高亮動畫（只注入一次）
+        if (!document.getElementById('panel-drop-style')) {
+          const st = document.createElement('style');
+          st.id = 'panel-drop-style';
+          st.textContent = `
+            @keyframes panelDropFlash {
+              0%   { background: var(--accent-light); border-color: var(--accent); }
+              60%  { background: var(--accent-light); border-color: var(--accent); }
+              100% { background: var(--surface-2);    border-color: var(--border); }
+            }
+            .panel-drop-highlight {
+              animation: panelDropFlash 0.7s ease-out forwards;
+            }
+          `;
+          document.head.appendChild(st);
+        }
+
+        function rebuildPanelRows(highlightIdx = -1) {
+          tdSpec.innerHTML = '';
+
+          // ── 面板總高計算 ──
+          function calcTotalH() {
+            return mod.panelHeights.reduce((s, p, i) => {
+              const _isLast = i === mod.panelHeights.length - 1;
+              return s + p.h + (_isLast ? 41 : 15);
+            }, 0);
+          }
+
+          // ── Header 列：面板總高 + W 輸入框 + 收合 toggle ──
+          const specHeader = document.createElement('div');
+          specHeader.style.cssText = 'display:flex;align-items:center;gap:4px;margin-bottom:5px;flex-wrap:wrap;min-width:0;';
+
+          const totalHLabel = document.createElement('span');
+          totalHLabel.className = 'panel-total-h-label';
+          totalHLabel.style.cssText = 'font-size:11px;color:var(--text-secondary);white-space:nowrap;flex-shrink:0;min-width:0;';
+          totalHLabel.textContent = `面板總高 ${calcTotalH()} mm`;
+
+          // W 輸入框（收合時也能用）
+          const widthPrefix = document.createElement('span');
+          widthPrefix.style.cssText = 'font-size:11px;color:var(--text-secondary);white-space:nowrap;flex-shrink:0;';
+          widthPrefix.textContent = 'W =';
+          const widthInput = document.createElement('input');
+          widthInput.type = 'number';
+          widthInput.min = '200';
+          widthInput.max = '1800';
+          widthInput.step = '1';
+          widthInput.value = mod.customWidth || 700;
+          widthInput.style.cssText = `
+            width:52px;padding:2px 4px;
+            border:1px solid var(--border);border-radius:5px;
+            font-size:12px;font-family:inherit;
+            text-align:center;color:var(--accent);
+            font-weight:600;background:var(--accent-light);
+            outline:none;transition:border-color 0.15s;flex-shrink:0;min-width:0;
+          `;
+          const widthUnit = document.createElement('span');
+          widthUnit.style.cssText = 'font-size:11px;color:var(--text-muted);flex-shrink:0;';
+          widthUnit.textContent = 'mm';
+          widthInput.addEventListener('focus', () => {
+            widthInput.style.borderColor = 'var(--accent)';
+            widthInput.style.boxShadow = '0 0 0 2px rgba(212,97,58,0.15)';
+          });
+          widthInput.addEventListener('blur', () => {
+            widthInput.style.borderColor = 'var(--border)';
+            widthInput.style.boxShadow = '';
+            const val = parseInt(widthInput.value, 10);
+            if (!isNaN(val) && val !== mod.customWidth) {
+              refreshModuleWidth(mod, val);
+            }
+          });
+          widthInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') widthInput.blur();
+          });
+
+          // 收合 toggle 按鈕
+          const toggleBtn = document.createElement('button');
+          if (mod._panelExpanded === undefined) mod._panelExpanded = false; // 預設收合
+          toggleBtn.style.cssText = `
+            margin-left:auto;flex-shrink:0;
+            padding:1px 7px;border-radius:4px;font-size:10px;cursor:pointer;
+            border:1px solid var(--border);color:var(--text-secondary);
+            background:var(--surface);transition:background 0.15s,color 0.15s,border-color 0.15s;
+            white-space:nowrap;font-family:inherit;line-height:1.6;
+          `;
+          toggleBtn.textContent = mod._panelExpanded ? '▲ 收合' : '▼ 展開';
+          toggleBtn.addEventListener('mouseenter', () => {
+            toggleBtn.style.borderColor = 'var(--accent)';
+            toggleBtn.style.color = 'var(--accent)';
+            toggleBtn.style.background = 'var(--accent-light)';
+          });
+          toggleBtn.addEventListener('mouseleave', () => {
+            toggleBtn.style.borderColor = 'var(--border)';
+            toggleBtn.style.color = 'var(--text-secondary)';
+            toggleBtn.style.background = 'var(--surface)';
+          });
+          toggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            mod._panelExpanded = !mod._panelExpanded;
+            rebuildPanelRows();
+          });
+
+          // 收邊顏色 label + 選色器（收合時也能用）
+          const edgeColorLabel = document.createElement('span');
+          edgeColorLabel.style.cssText = 'font-size:11px;color:var(--text-secondary);white-space:nowrap;flex-shrink:0;';
+          edgeColorLabel.textContent = '收邊';
+          const edgeColorCell = buildEdgeColorCell(mod);
+
+          specHeader.appendChild(totalHLabel);
+          specHeader.appendChild(widthPrefix);
+          specHeader.appendChild(widthInput);
+          specHeader.appendChild(widthUnit);
+          specHeader.appendChild(edgeColorLabel);
+          specHeader.appendChild(edgeColorCell);
+          specHeader.appendChild(toggleBtn);
+          tdSpec.appendChild(specHeader);
+
+          // ── panelBody：收合/展開區域 ──
+          const panelBody = document.createElement('div');
+          panelBody.style.cssText = mod._panelExpanded ? 'display:block;' : 'display:none;';
+
+          // ── 拖曳排序狀態 ──
+          let dragSrcIdx = null;
+
+          mod.panelHeights.forEach((panel, idx) => {
+            // ── 外層包裝（flex column，含高度列 + 顏色列 + 滑桿列）──
+            const cardWrap = document.createElement('div');
+            cardWrap.dataset.panelIdx = idx;
+            cardWrap.style.cssText = `
+              display:flex;flex-direction:column;gap:3px;
+              margin-bottom:6px;padding:5px 6px;
+              border:1px solid var(--border);border-radius:6px;
+              background:var(--surface-2);
+              transition:opacity 0.15s;
+            `;
+
+            // dragover：顯示插入線（上／下方 border highlight）
+            cardWrap.addEventListener('dragover', (e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'move';
+              const overIdx = parseInt(cardWrap.dataset.panelIdx);
+              if (dragSrcIdx === null || dragSrcIdx === overIdx) return;
+              // 判斷滑鼠在卡片上半還是下半，決定插入線方向
+              const rect = cardWrap.getBoundingClientRect();
+              const mid  = rect.top + rect.height / 2;
+              const insertBefore = e.clientY < mid;
+              // 清除其他卡片的 indicator
+              panelBody.querySelectorAll('[data-panel-idx]').forEach(c => {
+                c.style.borderTop    = '1px solid var(--border)';
+                c.style.borderBottom = '1px solid var(--border)';
+              });
+              if (insertBefore) {
+                cardWrap.style.borderTop = '2.5px solid var(--accent)';
+              } else {
+                cardWrap.style.borderBottom = '2.5px solid var(--accent)';
+              }
+            });
+
+            cardWrap.addEventListener('dragleave', (e) => {
+              // 只在真正離開 cardWrap 時才清除（子元素觸發的 dragleave 忽略）
+              if (cardWrap.contains(e.relatedTarget)) return;
+              cardWrap.style.borderTop    = '1px solid var(--border)';
+              cardWrap.style.borderBottom = '1px solid var(--border)';
+            });
+
+            cardWrap.addEventListener('drop', (e) => {
+              e.preventDefault();
+              const overIdx = parseInt(cardWrap.dataset.panelIdx);
+              if (dragSrcIdx === null || dragSrcIdx === overIdx) return;
+
+              // 判斷插入位置（上半 = 插到 overIdx 之前，下半 = 插到 overIdx 之後）
+              const rect = cardWrap.getBoundingClientRect();
+              const insertBefore = e.clientY < rect.top + rect.height / 2;
+              let targetIdx = insertBefore ? overIdx : overIdx + 1;
+              // 若來源在目標之前，刪除後 index 要修正
+              if (dragSrcIdx < targetIdx) targetIdx--;
+
+              // 重排 panelHeights
+              const moved = mod.panelHeights.splice(dragSrcIdx, 1)[0];
+              mod.panelHeights.splice(targetIdx, 0, moved);
+
+              dragSrcIdx = null;
+              refreshBPanelSVG(mod);
+              rebuildPanelRows(targetIdx); // 傳入落點 index 供高亮使用
+            });
+
+            // ── 第一列：面板標籤 + H 輸入 + 刪除按鈕 ──
+            const rowWrap = document.createElement('div');
+            rowWrap.style.cssText = 'display:flex;align-items:center;gap:4px;';
+
+            // ── 拖曳手柄 ──
+            const dragHandle = document.createElement('span');
+            dragHandle.className = 'panel-drag-handle';
+            dragHandle.title = '拖曳調整面板順序';
+            dragHandle.innerHTML = '&#8942;&#8942;'; // ⋮⋮
+
+            // 只有從 handle 才能啟動拖曳
+            dragHandle.addEventListener('mousedown', () => {
+              cardWrap.draggable = true;
+            });
+            dragHandle.addEventListener('touchstart', () => {
+              cardWrap.draggable = true;
+            }, { passive: true });
+
+            cardWrap.addEventListener('dragstart', (e) => {
+              dragSrcIdx = parseInt(cardWrap.dataset.panelIdx);
+              e.dataTransfer.effectAllowed = 'move';
+              // 拖曳中：半透明
+              setTimeout(() => { cardWrap.style.opacity = '0.4'; }, 0);
+            });
+
+            cardWrap.addEventListener('dragend', () => {
+              cardWrap.draggable = false;
+              cardWrap.style.opacity = '1';
+              dragSrcIdx = null;
+              // 清除所有插入線
+              panelBody.querySelectorAll('[data-panel-idx]').forEach(c => {
+                c.style.borderTop    = '1px solid var(--border)';
+                c.style.borderBottom = '1px solid var(--border)';
+              });
+            });
+
+            const lbl = document.createElement('span');
+            lbl.style.cssText = 'font-size:11px;color:var(--text-secondary);white-space:nowrap;min-width:36px;';
+            lbl.textContent = `面板${idx + 1}`;
+
+            const prefix = document.createElement('span');
+            prefix.style.cssText = 'font-size:11px;color:var(--text-secondary);white-space:nowrap;';
+            prefix.textContent = 'H =';
+
+            const inp = document.createElement('input');
+            inp.type = 'number';
+            inp.min = '50';
+            inp.max = '3000';
+            inp.step = '1';
+            // 最後一片扣 41mm，其他扣 15mm（panelHeights 存扣除後的值，input 顯示原始輸入值）
+            const isLast = idx === mod.panelHeights.length - 1;
+            const deduct = isLast ? 41 : 15;
+            inp.value = panel.h + deduct;
+            inp.style.cssText = `
+              width:60px;padding:2px 5px;
+              border:1px solid var(--border);border-radius:5px;
+              font-size:12px;font-family:inherit;
+              text-align:center;color:var(--accent);
+              font-weight:600;background:var(--accent-light);
+              outline:none;transition:border-color 0.15s;
+            `;
+            if (isLast) {
+              // 建立 inline tooltip，跟著 inp 走
+              const _tip = document.createElement('div');
+              _tip.className = 'panel-tip';
+              _tip.textContent = '底部面板尺寸輸入值需+50mm。\n例: 700mm規格尺寸→輸入750mm';
+              // inp 的父容器需要 position:relative 才能讓 tooltip 定位
+              inp.style.position = 'relative'; // inp 本身不行，改包一層
+              // 實際做法：把 tip 放進 inp 的 parentNode，並讓 parentNode position:relative
+              const _showTip = () => {
+                const _parent = inp.parentNode;
+                if (_parent && !_parent.querySelector('.panel-tip')) {
+                  _parent.style.position = 'relative';
+                  _parent.appendChild(_tip);
+                }
+                requestAnimationFrame(() => _tip.classList.add('visible'));
+              };
+              const _hideTip = () => _tip.classList.remove('visible');
+              inp.addEventListener('mouseenter', _showTip);
+              inp.addEventListener('mouseleave', _hideTip);
+              inp.addEventListener('focus', _showTip);
+              inp.addEventListener('blur', _hideTip);
+            }
+            inp.addEventListener('focus', () => {
+              inp.style.borderColor = 'var(--accent)';
+              inp.style.boxShadow = '0 0 0 2px rgba(212,97,58,0.15)';
+            });
+            inp.addEventListener('blur', () => {
+              inp.style.borderColor = 'var(--border)';
+              inp.style.boxShadow = '';
+              const val = parseInt(inp.value, 10);
+              if (!isNaN(val) && val >= 50) {
+                const _isLast = idx === mod.panelHeights.length - 1;
+                const oldHeightPx = mod.height * SCALE;
+                mod.panelHeights[idx].h = Math.max(1, val - (_isLast ? 41 : 15));
+                refreshBPanelSVG(mod);
+                // 位移整組，保持底部不變
+                const deltaH = mod.height * SCALE - oldHeightPx;
+                if (deltaH !== 0 && mod.gid) {
+                  modules.filter(m => m.gid === mod.gid).forEach(m => {
+                    m.y -= deltaH;
+                    updateModuleDOMPosition(m);
+                  });
+                } else if (deltaH !== 0) {
+                  mod.y -= deltaH;
+                  updateModuleDOMPosition(mod);
+                }
+                // 同步 matSel 玻璃選項的 disabled 狀態
+                const _matSel = document.getElementById(`matSel-${idx}-${mod.uid}`);
+                if (_matSel) {
+                  const _rawHNew = val; // val 是使用者輸入的原始高度（mm）
+                  Array.from(_matSel.options).forEach(opt => {
+                    const _isGlass = !!PANEL_MATERIAL_GLASS[opt.value];
+                    const _dis = _isGlass && _rawHNew > 400;
+                    opt.disabled = _dis;
+                    opt.textContent = _dis ? `${opt.value}（限 ≤400mm）` : opt.value;
+                  });
+                  // 若目前選中的是玻璃且超高，自動還原為「平面烤漆」
+                  const _curMat = mod.panelHeights[idx].material || '平面烤漆';
+                  if (PANEL_MATERIAL_GLASS[_curMat] && _rawHNew > 400) {
+                    mod.panelHeights[idx].material = '平面烤漆';
+                    mod.panelHeights[idx].opacity  = 1;
+                    _matSel.value = '平面烤漆';
+                    refreshBPanelSVG(mod);
+                    // 重建選色器
+                    const _oldCS = document.getElementById(`colorSelect-${idx}-${mod.uid}`);
+                    if (_oldCS) _oldCS.replaceWith(buildPanelColorCell(mod, idx));
+                  }
+                }
+                // 更新面板總高標示
+                const newTotalH = mod.panelHeights.reduce((s, p, i) => {
+                  const __isLast = i === mod.panelHeights.length - 1;
+                  const __deduct = __isLast ? 41 : 15;
+                  return s + p.h + __deduct;
+                }, 0);
+                const _header = tdSpec.querySelector('.panel-total-h-label');
+                if (_header) _header.textContent = `面板總高 ${newTotalH} mm`;
+                // 同步收邊條型號欄
+                if (mod.gid) {
+                  const _ls = modules.find(m => m.gid === mod.gid && m.id === 'P3N-LSIDE');
+                  const _rs = modules.find(m => m.gid === mod.gid && m.id === 'P3N-RSIDE');
+                  syncGroupRowSideId(mod, _ls, _rs, tdName, tdId, newTotalH);
+                }
+
+              } else {
+                inp.value = mod.panelHeights[idx].h + deduct;
+              }
+            });
+            inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') inp.blur(); });
+
+            const unit = document.createElement('span');
+            unit.style.cssText = 'font-size:11px;color:var(--text-muted);';
+            unit.textContent = 'mm';
+
+            const btnDel = document.createElement('button');
+            btnDel.textContent = '✕';
+            btnDel.title = `移除面板${idx + 1}`;
+            btnDel.style.cssText = `
+              width:18px;height:18px;padding:0;border-radius:3px;
+              border:1px solid var(--border);background:var(--bg);
+              font-size:11px;line-height:1;cursor:pointer;
+              color:var(--text-secondary);margin-left:auto;
+              display:${mod.panelHeights.length <= 1 ? 'none' : 'inline-flex'};
+              align-items:center;justify-content:center;
+            `;
+            btnDel.addEventListener('click', (e) => {
+              e.stopPropagation();
+              if (mod.panelHeights.length <= 1) return;
+              const oldHeightPx = mod.height * SCALE;
+              mod.panelHeights.splice(idx, 1);
+              refreshBPanelSVG(mod);
+              const deltaH = mod.height * SCALE - oldHeightPx; // 負值（高度縮小）
+              if (deltaH !== 0 && mod.gid) {
+                modules.filter(m => m.gid === mod.gid).forEach(m => {
+                  m.y -= deltaH;
+                  updateModuleDOMPosition(m);
+                });
+              } else if (deltaH !== 0) {
+                mod.y -= deltaH;
+                updateModuleDOMPosition(mod);
+              }
+              rebuildPanelRows();
+            });
+
+            rowWrap.appendChild(dragHandle);
+            rowWrap.appendChild(lbl);
+            rowWrap.appendChild(prefix);
+            rowWrap.appendChild(inp);
+            rowWrap.appendChild(unit);
+            rowWrap.appendChild(btnDel);
+            cardWrap.appendChild(rowWrap);
+
+            // ── 第二列：面板選項下拉 ──
+            const matRow = document.createElement('div');
+            matRow.style.cssText = 'display:flex;align-items:center;gap:5px;margin-top:3px;';
+            const matLblEl = document.createElement('span');
+            matLblEl.style.cssText = 'font-size:11px;color:var(--text-secondary);white-space:nowrap;flex-shrink:0;';
+            matLblEl.textContent = '面板選項';
+            const matSel = document.createElement('select');
+            matSel.id = `matSel-${idx}-${mod.uid}`;
+            matSel.style.cssText = `
+              font-size:11px;font-family:inherit;padding:2px 4px;
+              border:1px solid var(--border);border-radius:4px;
+              background:var(--surface);color:var(--text);cursor:pointer;
+              outline:none;flex:1;min-width:0;
+            `;
+            const _rawH0 = panel.h + deduct; // 使用者輸入的原始高度（mm）
+            PANEL_MATERIALS.forEach(m => {
+              const opt = document.createElement('option');
+              opt.value = m;
+              const isGlassMat = !!PANEL_MATERIAL_GLASS[m];
+              const isDisabled = isGlassMat && _rawH0 > 400;
+              opt.disabled = isDisabled;
+              opt.textContent = isDisabled ? `${m}（限 ≤400mm）` : m;
+              if ((panel.material || '平面烤漆') === m) opt.selected = true;
+              matSel.appendChild(opt);
+            });
+            matSel.addEventListener('change', () => {
+              const newMat = matSel.value;
+              mod.panelHeights[idx].material = newMat;
+              const glassFixed = PANEL_MATERIAL_GLASS[newMat];
+              if (glassFixed) {
+                // 玻璃：固定顏色與 opacity
+                mod.panelHeights[idx].color   = glassFixed.hex;
+                mod.panelHeights[idx].opacity = glassFixed.opacity;
+              } else {
+                // 非玻璃：opacity 還原 1，波音軟片預設色
+                mod.panelHeights[idx].opacity = 1;
+                if (newMat === '波音軟片') mod.panelHeights[idx].color = '#E6D4C3';
+              }
+              refreshBPanelSVG(mod);
+              // 重建此面板卡片的選色器
+              const oldColorSel = document.getElementById(`colorSelect-${idx}-${mod.uid}`);
+              if (oldColorSel) {
+                const newColorSel = buildPanelColorCell(mod, idx);
+                oldColorSel.replaceWith(newColorSel);
+              }
+              // 同步色塊按鈕顯示
+              const _btn = document.getElementById(`colorBtn-${idx}-${mod.uid}`);
+              if (_btn) {
+                _btn.style.background = mod.panelHeights[idx].color;
+                _btn.style.opacity    = mod.panelHeights[idx].opacity;
+              }
+            });
+            matRow.appendChild(matLblEl);
+            matRow.appendChild(matSel);
+            cardWrap.appendChild(matRow);
+
+            // ── 第三列：agora 式選色器 ──
+            const colorSelectWrap = buildPanelColorCell(mod, idx);
+            cardWrap.appendChild(colorSelectWrap);
+
+            panelBody.appendChild(cardWrap);
+
+            // 拖曳落點高亮
+            if (idx === highlightIdx) {
+              requestAnimationFrame(() => {
+                cardWrap.classList.add('panel-drop-highlight');
+                cardWrap.addEventListener('animationend', () => {
+                  cardWrap.classList.remove('panel-drop-highlight');
+                }, { once: true });
+              });
+            }
+          });
+
+          // ── ＋ 按鈕列 ──
+          const ctrlWrap = document.createElement('div');
+          ctrlWrap.style.cssText = 'display:flex;align-items:center;gap:6px;margin-top:2px;';
+
+          const btnPlus = document.createElement('button');
+          btnPlus.textContent = '＋ 增加面板';
+          btnPlus.style.cssText = `
+            padding:2px 8px;border-radius:4px;font-size:11px;cursor:pointer;
+            border:1px solid var(--accent);color:var(--accent);
+            background:var(--accent-light);transition:background 0.15s;
+          `;
+          btnPlus.addEventListener('click', (e) => {
+            e.stopPropagation();
+            mod._panelExpanded = true; // 新增面板時自動展開
+
+            // 記錄新增前的高度（px），用於計算位移量
+            const oldHeightPx = mod.height * SCALE;
+
+            mod.panelHeights.unshift({ h: 200 - 15, color: '#ffffff', opacity: 1, material: '平面烤漆' });
+            refreshBPanelSVG(mod);
+
+            // 計算高度增量，將整組向上移動，保持底部位置不變
+            const deltaH = mod.height * SCALE - oldHeightPx;
+            if (deltaH !== 0 && mod.gid) {
+              modules.filter(m => m.gid === mod.gid).forEach(m => {
+                m.y -= deltaH;
+                updateModuleDOMPosition(m);
+              });
+            } else if (deltaH !== 0) {
+              mod.y -= deltaH;
+              updateModuleDOMPosition(mod);
+            }
+
+            rebuildPanelRows();
+          });
+
+          ctrlWrap.appendChild(btnPlus);
+          panelBody.appendChild(ctrlWrap);
+          tdSpec.appendChild(panelBody);
+
+          // 面板高度變更後，同步 group row 型號欄的收邊條型號
+          if (mod.gid) {
+            const _ls = modules.find(m => m.gid === mod.gid && m.id === 'P3N-LSIDE');
+            const _rs = modules.find(m => m.gid === mod.gid && m.id === 'P3N-RSIDE');
+            syncGroupRowSideId(mod, _ls, _rs, tdName, tdId);
+          }
+        }
+
+        rebuildPanelRows();
+      } else {
+        tdSpec.textContent = mod.spec;
+      }
+
+      const tdQty = document.createElement('td');
+      tdQty.dataset.label = '數量';
+      tdQty.style.textAlign = 'center';
+      if (isGroupRow) {
+        const edgeCount = ((lside && lside.useEdge !== false) ? 1 : 0) + ((rside && rside.useEdge !== false) ? 1 : 0);
+        tdQty.id = `tdqty-group-${mod.uid}`;
+        if (edgeCount > 0) {
+          tdQty.innerHTML = `<span style="display:block;">1</span><span style="display:block;color:var(--text-secondary);font-size:11px;">${edgeCount}</span>`;
+        } else {
+          tdQty.textContent = '1';
+        }
+      } else {
+        tdQty.textContent = '1';
+      }
+
+      const tdNote = document.createElement('td');
+      tdNote.dataset.label = '註記';
+      tdNote.className = 'note-cell';
+      const textarea = document.createElement('textarea');
+      textarea.rows = 1;
+      textarea.id = `note-${mod.uid}`;
+      // 群組列：使用 BPANEL（mod）的 note
+      textarea.value = mod.note || '';
+      textarea.addEventListener('input', () => {
+        mod.note = textarea.value;
+        // 群組列：同步 LSIDE / RSIDE 的 note（保持資料一致）
+        if (isGroupRow) {
+          if (lside) lside.note = textarea.value;
+          if (rside) rside.note = textarea.value;
+        }
+      });
+      tdNote.appendChild(textarea);
+
+      // ── 側收邊欄 ──
+      const tdEdge = document.createElement('td');
+      tdEdge.dataset.label = '側收邊';
+      if (isGroupRow && lside && rside) {
+        tdEdge.className = 'edge-cell';
+
+        // 左側收邊 checkbox
+        const lLabel = document.createElement('label');
+        const lChk = document.createElement('input');
+        lChk.type = 'checkbox';
+        lChk.checked = lside.useEdge !== false;
+        lChk.addEventListener('change', () => {
+          lside.useEdge = lChk.checked;
+          refreshSideEdgeSVG(lside);
+          syncGroupRowSideId(mod, lside, rside, tdName, tdId);
+        });
+        const lText = document.createTextNode('左側收邊');
+        lLabel.appendChild(lChk);
+        lLabel.appendChild(lText);
+
+        // 右側收邊 checkbox
+        const rLabel = document.createElement('label');
+        const rChk = document.createElement('input');
+        rChk.type = 'checkbox';
+        rChk.checked = rside.useEdge !== false;
+        rChk.addEventListener('change', () => {
+          rside.useEdge = rChk.checked;
+          refreshSideEdgeSVG(rside);
+          syncGroupRowSideId(mod, lside, rside, tdName, tdId);
+        });
+        const rText = document.createTextNode('右側收邊');
+        rLabel.appendChild(rChk);
+        rLabel.appendChild(rText);
+
+        tdEdge.appendChild(lLabel);
+        tdEdge.appendChild(rLabel);
+      } else {
+        tdEdge.className = 'edge-cell edge-na';
+        tdEdge.textContent = '—';
+      }
+
+      tr.addEventListener('click', (e) => {
+        if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+        if (isGroupRow) {
+          // 群組列點擊：選取整組
+          expandSelectionForGid(mod.gid);
+        } else {
+          selectModule(mod.uid);
+          const modDiv = document.getElementById(`mod-${mod.uid}`);
+          if (modDiv) modDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      });
+
+      tr.appendChild(tdName);
+      tr.appendChild(tdId);
+      tr.appendChild(tdSpec);
+      tr.appendChild(tdQty);
+      tr.appendChild(tdEdge);
+      tr.appendChild(tdNote);
+      tbody.appendChild(tr);
+    });
+  }
+}
+
+function toggleAggregate() {
+  isAggregated = !isAggregated;
+  const btn = document.getElementById('aggregateBtn');
+  if (btn) {
+    btn.textContent = isAggregated ? '🧮 明細型號' : '🧮 彙整型號';
+  }
+  renderTable();
+}
+
+
+
+function exportCSV() {
+  if (modules.length === 0) {
+    showToast('配置清單是空的，無法匯出');
+    return;
+  }
+
+  const rows = [['模塊名稱', '型號', '規格(mm)', '數量', '備註']];
+
+  if (isAggregated) {
+    const map = new Map();
+    modules.forEach(mod => {
+      if (mod.id === 'P3N-LSIDE' || mod.id === 'P3N-RSIDE') return;
+      const hLabel = mod.heightCustomizable ? (mod.customHeight || mod.height) : null;
+      const key = mod.id + '|' + (hLabel||'') + '|' + (mod.note || '');
+      if (map.has(key)) {
+        map.get(key).qty++;
+      } else {
+        const specOut = hLabel != null ? `H${hLabel}` : mod.spec;
+        const _csvName = mod.id === 'P3N-POST' ? '轉柱工本費' : mod.name;
+        let _csvId;
+        if (mod.id === 'P3N-POST') {
+          _csvId = getPostDisplayId(hLabel || mod.height);
+        } else if (mod.id === 'P3N-BPANEL') {
+          const _csvH = calcBPanelTotalH(mod);
+          const _csvW = mod.customWidth || 700;
+          _csvId = getBPanelDisplayId(_csvH, _csvW);
+        } else {
+          _csvId = mod.id;
+        }
+        map.set(key, { name: _csvName, id: _csvId, spec: specOut, qty: 1, note: mod.note || '' });
+      }
+
+      if (mod.id === 'P3N-BPANEL') {
+        getPanelMatRows(mod).forEach(row => {
+          const matKey = 'MAT|' + row.id + '|' + row.spec + '|' + row.note;
+          if (map.has(matKey)) {
+            map.get(matKey).qty += row.qty;
+          } else {
+            map.set(matKey, { name: row.name, id: row.id, spec: row.spec, qty: row.qty, note: row.note });
+          }
+        });
+      }
+
+      if (mod.id === 'P3N-BPANEL' && mod.gid) {
+        const ls = modules.find(m => m.gid === mod.gid && m.id === 'P3N-LSIDE');
+        const rs = modules.find(m => m.gid === mod.gid && m.id === 'P3N-RSIDE');
+        const edgeCount = ((ls && ls.useEdge !== false) ? 1 : 0) + ((rs && rs.useEdge !== false) ? 1 : 0);
+        if (edgeCount > 0) {
+          const panelH = mod.id === 'P3N-BPANEL' ? calcBPanelTotalH(mod) : (mod.customHeight || mod.height);
+          const sideId = getSideDisplayId(panelH);
+          const sideKey = 'SIDE|' + panelH;
+          if (map.has(sideKey)) {
+            map.get(sideKey).qty += edgeCount;
+          } else {
+            map.set(sideKey, { name: '收邊條工本費', id: sideId, spec: `H${panelH}`, qty: edgeCount, note: sideId === '' ? '訂製收邊條' : '' });
+          }
+        }
+      }
+    });
+    map.forEach(item => rows.push([item.name, item.id, item.spec, item.qty, item.note]));
+  } else {
+    const exportedGids = new Set();
+    modules.forEach(mod => {
+      if (mod.gid) {
+        if (mod.id === 'P3N-LSIDE' || mod.id === 'P3N-RSIDE') return;
+        if (exportedGids.has(mod.gid)) return;
+        exportedGids.add(mod.gid);
+        const lside = modules.find(m => m.gid === mod.gid && m.id === 'P3N-LSIDE');
+        const rside = modules.find(m => m.gid === mod.gid && m.id === 'P3N-RSIDE');
+        const edgeCount = ((lside && lside.useEdge !== false) ? 1 : 0) + ((rside && rside.useEdge !== false) ? 1 : 0);
+        const _csvDetailH = (mod.id === 'P3N-BPANEL') ? calcBPanelTotalH(mod) : (mod.customHeight || mod.height);
+        const _csvDetailW = mod.customWidth || 700;
+        const _csvDetailId = (mod.id === 'P3N-BPANEL') ? getBPanelDisplayId(_csvDetailH, _csvDetailW) : mod.id;
+        rows.push(['屏風模塊', _csvDetailId, mod.spec, 1, mod.note || '']);
+        // 各片面板材質
+        getPanelMatRows(mod).forEach(row => {
+          rows.push([row.name, row.id, row.spec, row.qty, row.note]);
+        });
+        if (edgeCount > 0) { const _sid = getSideDisplayId(panelH); rows.push(['收邊條工本費', _sid, `H${panelH}`, edgeCount, _sid === '' ? '訂製收邊條' : '']); }
+      } else {
+        const specOut = mod.heightCustomizable ? `H${mod.customHeight || mod.height}` : mod.spec;
+        const _csvModName = mod.id === 'P3N-POST' ? '轉柱工本費' : mod.name;
+        const _csvModId = mod.id === 'P3N-POST' ? getPostDisplayId(mod.customHeight || mod.height) : mod.id;
+        rows.push([_csvModName, _csvModId, specOut, 1, mod.note || '']);
+      }
+    });
+  }
+
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const bom = '\uFEFF'; // UTF-8 BOM，讓 Excel 正確顯示中文
+  const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `CP3_Screen_BOM_${Date.now()}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  showToast('CSV 已匯出');
+}
+
+// ==========================================
+// 儲存 / 載入專案
+// ==========================================
+function saveProject() {
+  if (modules.length === 0) {
+    showToast('畫布是空的，無法儲存');
+    return;
+  }
+  const data = JSON.stringify({ version: 1, modules });
+  const blob = new Blob([data], { type: 'application/json' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `CP3_Screen_Project_${Date.now()}.line`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  showToast('專案已儲存');
+}
+
+function loadProject(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.modules || !Array.isArray(data.modules)) throw new Error('格式錯誤');
+
+      // 清除畫布
+      modules.forEach(mod => {
+        const div = document.getElementById(`mod-${mod.uid}`);
+        if (div) div.remove();
+      });
+      modules = [];
+      selectedUid = null;
+      selectedUids.clear();
+
+      // 載入模塊
+      const validIds = new Set(Object.values(PRODUCT_MODELS).flat().map(m => m.id));
+      const modelMap = {};
+      Object.values(PRODUCT_MODELS).flat().forEach(m => { modelMap[m.id] = m; });
+      data.modules.forEach(mod => {
+        // 確保必要欄位，且型號在已知清單內
+        if (!mod.uid || !mod.id || !validIds.has(mod.id)) return;
+        mod.note = mod.note || '';
+        mod.rotate = mod.rotate || 0;
+        mod.acrylicQty = 0;
+        // 還原訂製高度相關欄位
+        const template = modelMap[mod.id];
+        if (template && template.heightCustomizable) {
+          mod.heightCustomizable = true;
+          mod.customHeight = mod.customHeight || mod.height || template.height;
+          mod.height = mod.customHeight;
+        } else {
+          mod.heightCustomizable = false;
+        }
+        // 還原側收邊狀態（舊檔無此欄位時預設 true）
+        if (mod.id === 'P3N-LSIDE' || mod.id === 'P3N-RSIDE') {
+          if (mod.useEdge === undefined) mod.useEdge = true;
+        }
+        // 還原面板高度陣列（P3N-BPANEL 專用）
+        if (mod.id === 'P3N-BPANEL') {
+          if (Array.isArray(mod.panelHeights) && mod.panelHeights.length >= 1) {
+            // 兼容舊格式（純數字）及新格式（物件）
+            mod.panelHeights = mod.panelHeights.map((p, _i, _arr) => {
+              if (typeof p === 'object' && p !== null) {
+                const h = Math.max(50, Math.round(p.h));
+                const _isLast = _i === _arr.length - 1;
+                const _deduct = _isLast ? 41 : 15;
+                const _rawH   = h + _deduct;
+                let mat = p.material || '平面烤漆';
+                // 高度 > 400mm 時玻璃材質自動還原
+                if (PANEL_MATERIAL_GLASS[mat] && _rawH > 400) mat = '平面烤漆';
+                const glassFixed = PANEL_MATERIAL_GLASS[mat];
+                const color   = glassFixed ? glassFixed.hex   : (p.color || '#ffffff');
+                const opacity = glassFixed ? glassFixed.opacity : (p.opacity != null ? p.opacity : 1);
+                return { h, color, opacity, material: mat };
+              }
+              return { h: Math.max(50, Math.round(p)), color: '#ffffff', opacity: 1, material: '平面烤漆' };
+            });
+          } else if (typeof mod.panelCount === 'number' && mod.panelCount >= 1) {
+            mod.panelHeights = Array.from({ length: mod.panelCount },
+              (_, i) => ({ h: i === mod.panelCount - 1 ? 750 - 41 : 200 - 15, color: '#ffffff', opacity: 1, material: '平面烤漆' }));
+          } else {
+            mod.panelHeights = [{ h: 750 - 41, color: '#ffffff', opacity: 1, material: '平面烤漆' }];
+          }
+          delete mod.panelCount;
+          // 重算 mod.height（DOM 尚未建立，僅算值，不操作 DOM）
+          const _svgPerMm  = 201.5 / 750;
+          const _fixedSVG  = 3.33 + mod.panelHeights.length * 4.26 + 2.83 + 0.5;
+          const _whiteMM   = mod.panelHeights.reduce((s, p) => s + p.h, 0);
+          mod.height = Math.round(_fixedSVG / _svgPerMm + _whiteMM);
+        }
+        modules.push(mod);
+        renderModuleDOM(mod);
+      });
+
+      renderTable();
+      updateEmptyHint();
+      showToast(`已載入 ${modules.length} 個模塊`);
+    } catch (err) {
+      showToast('載入失敗：檔案格式不正確');
+    }
+  };
+  reader.readAsText(file);
+
+  // 重置 input，讓同一檔案可再次觸發 onchange
+  event.target.value = '';
+}
+
+// ==========================================
+// 7. 精確不失真：原生 2D Canvas 配置擷圖邏輯
+// ==========================================
+function captureCanvas() {
+  if (modules.length === 0) {
+    showToast("畫布空白，無法截圖");
+    return;
+  }
+
+  showToast("正在生成高解析度平面圖...");
+
+  const PADDING = 200; // 向外擴展 200 邏輯像素
+  const DPR = 2;       // 2 倍解析度輸出
+
+  // 1. 計算所有模塊旋轉後的實際邊界框
+  //    對每個模塊取 4 個角點做旋轉，求整體最大外框
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+  modules.forEach(mod => {
+    const wPx = mod.width * SCALE;
+    const hPx = mod.height * SCALE;
+    const cx = mod.x + wPx / 2;
+    const cy = mod.y + hPx / 2;
+
+    // 4 個角點（相對中心）
+    const _angle = ((mod.rotate || 0) * Math.PI) / 180;
+    const _cos = Math.cos(_angle);
+    const _sin = Math.sin(_angle);
+    [[-wPx/2, -hPx/2], [wPx/2, -hPx/2], [wPx/2, hPx/2], [-wPx/2, hPx/2]].forEach(([lx, ly]) => {
+      const wx = cx + lx * _cos - ly * _sin;
+      const wy = cy + lx * _sin + ly * _cos;
+      if (wx < minX) minX = wx;
+      if (wx > maxX) maxX = wx;
+      if (wy < minY) minY = wy;
+      if (wy > maxY) maxY = wy;
+    });
+  });
+
+  // 2. 加上 padding，得到擷圖範圍（邏輯像素）
+  const cropX = minX - PADDING;
+  const cropY = minY - PADDING;
+  const cropW = (maxX - minX) + PADDING * 2;
+  const cropH = (maxY - minY) + PADDING * 2;
+
+  // 3. 建立高解析度 Canvas
+  const exportCanvas = document.createElement('canvas');
+  exportCanvas.width  = Math.ceil(cropW * DPR);
+  exportCanvas.height = Math.ceil(cropH * DPR);
+  const ctx = exportCanvas.getContext('2d');
+  ctx.scale(DPR, DPR);
+
+  // 4. 填滿背景色
+  ctx.fillStyle = '#fcfcfc';
+  ctx.fillRect(0, 0, cropW, cropH);
+
+  // 5. 繪製網格（對齊世界座標網格，平移至擷圖原點）
+  const step1000 = 100;
+  const step200  = 20;
+
+  // 計算網格起始點（對齊世界座標的 20px 格線）
+  const gridStartX = Math.floor(cropX / step200) * step200;
+  const gridStartY = Math.floor(cropY / step200) * step200;
+
+  ctx.fillStyle = '#ccc';
+  for (let wx = gridStartX; wx <= cropX + cropW; wx += step200) {
+    for (let wy = gridStartY; wy <= cropY + cropH; wy += step200) {
+      ctx.beginPath();
+      ctx.arc(wx - cropX, wy - cropY, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  const gridStart1000X = Math.floor(cropX / step1000) * step1000;
+  const gridStart1000Y = Math.floor(cropY / step1000) * step1000;
+
+  ctx.fillStyle = '#5d5d5d';
+  for (let wx = gridStart1000X; wx <= cropX + cropW; wx += step1000) {
+    for (let wy = gridStart1000Y; wy <= cropY + cropH; wy += step1000) {
+      ctx.beginPath();
+      ctx.arc(wx - cropX, wy - cropY, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // 6. 依序繪製所有模塊（座標平移至擷圖原點）
+  let loadedImagesCount = 0;
+
+  modules.forEach(mod => {
+    const img = new Image();
+    const _capSvgId = ((mod.acrylicQty || 0) > 0 && CUSTOM_SVG[mod.id + 'S']) ? (mod.id + 'S') : mod.id;
+    const _rawCapSvg = (mod.id === 'P3N-BPANEL') ? getEffectiveModuleSVG(mod)
+      : mod.heightCustomizable ? getEffectiveModuleSVG(mod) : (CUSTOM_SVG[_capSvgId] || "");
+    const _blob = new Blob([_rawCapSvg], {type:"image/svg+xml"});
+    img.src = URL.createObjectURL(_blob);
+
+    img.onload = () => {
+      ctx.save();
+
+      const wPx = mod.width * SCALE;
+      const hPx = mod.height * SCALE;
+      // 模塊中心點平移至擷圖座標系
+      const centerX = (mod.x + wPx / 2) - cropX;
+      const centerY = (mod.y + hPx / 2) - cropY;
+
+      ctx.translate(centerX, centerY);
+      ctx.drawImage(img, -wPx / 2, -hPx / 2, wPx, hPx);
+
+      ctx.restore();
+
+      loadedImagesCount++;
+      if (loadedImagesCount === modules.length) {
+        finalizeDownload();
+      }
+    };
+
+    img.onerror = () => {
+      loadedImagesCount++;
+      if (loadedImagesCount === modules.length) {
+        finalizeDownload();
+      }
+    };
+  });
+
+  function finalizeDownload() {
+    exportCanvas.toBlob(blob => {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = `CP3_Screen_Design_${Date.now()}.png`;
+      link.href = url;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+      showToast("平面圖下載完成");
+    }, 'image/png');
+  }
+}
+// ==========================================
+// 複製選取模塊（Ctrl+D）
+// ==========================================
+function duplicateSelected() {
+  // 收集目前選取的所有模塊（單選 + 多選）
+  const targetUids = new Set();
+  if (selectedUid !== null) targetUids.add(selectedUid);
+  selectedUids.forEach(uid => targetUids.add(uid));
+
+  if (targetUids.size === 0) {
+    showToast('請先選取要複製的模塊');
+    return;
+  }
+
+  const targets = [...targetUids].map(uid => modules.find(m => m.uid === uid)).filter(Boolean);
+
+  // gid 群組：若只選到部分成員，自動補齊整組
+  const extraGids = new Set(targets.filter(m => m.gid).map(m => m.gid));
+  extraGids.forEach(gid => {
+    modules.filter(m => m.gid === gid && !targetUids.has(m.uid)).forEach(m => {
+      targetUids.add(m.uid);
+      targets.push(m);
+    });
+  });
+
+  // 計算被選取群組的 bounding box
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  targets.forEach(mod => {
+    const wPx = mod.width * SCALE;
+    const hPx = mod.height * SCALE;
+    if (mod.x < minX) minX = mod.x;
+    if (mod.y < minY) minY = mod.y;
+    if (mod.x + wPx > maxX) maxX = mod.x + wPx;
+    if (mod.y + hPx > maxY) maxY = mod.y + hPx;
+  });
+
+  // 群組 bounding box（邏輯像素）
+  const groupW = maxX - minX;
+  const groupH = maxY - minY;
+
+  // 以整個群組 bbox 為單位，螺旋掃描找空白錨點（bbox 左上角）
+  function findGroupAnchor(gW, gH) {
+    // 用現有所有模塊（含被選取的原模塊）的整體 bbox 做外框
+    let allMinX = Infinity, allMinY = Infinity, allMaxX = -Infinity, allMaxY = -Infinity;
+    modules.forEach(m => {
+      const mw = m.width * SCALE, mh = m.height * SCALE;
+      allMinX = Math.min(allMinX, m.x); allMinY = Math.min(allMinY, m.y);
+      allMaxX = Math.max(allMaxX, m.x + mw); allMaxY = Math.max(allMaxY, m.y + mh);
+    });
+    const allCX = (allMinX + allMaxX) / 2;
+    const allCY = (allMinY + allMaxY) / 2;
+
+    // 檢查群組（以左上角 ax,ay 放置）是否與任何現有模塊重疊
+    function groupOverlaps(ax, ay) {
+      return targets.some(src => {
+        // 各成員在新位置的實際座標
+        const nx = ax + (src.x - minX);
+        const ny = ay + (src.y - minY);
+        const nw = src.width * SCALE;
+        const nh = src.height * SCALE;
+        return modules.some(m => {
+          const mw = m.width * SCALE, mh = m.height * SCALE;
+          return nx < m.x + mw && nx + nw > m.x && ny < m.y + mh && ny + nh > m.y;
+        });
+      });
+    }
+
+    const GAP = 10;
+    const STEP = GAP;
+    let bestX = null, bestY = null, bestDist = Infinity;
+
+    for (let layer = 1; layer <= 300 && bestX === null; layer++) {
+      const outerL = allMinX - layer * STEP - gW - GAP;
+      const outerR = allMaxX + layer * STEP + GAP;
+      const outerT = allMinY - layer * STEP - gH - GAP;
+      const outerB = allMaxY + layer * STEP + GAP;
+      const candidates = [];
+      for (let y = outerT; y <= outerB + gH; y += STEP) { candidates.push({ x: outerR, y }); candidates.push({ x: outerL, y }); }
+      for (let x = outerL; x <= outerR + gW; x += STEP) { candidates.push({ x, y: outerB }); candidates.push({ x, y: outerT }); }
+      candidates.forEach(({ x, y }) => {
+        if (groupOverlaps(x, y)) return;
+        const cx = x + gW / 2, cy = y + gH / 2;
+        const dist = (cx - allCX) ** 2 + (cy - allCY) ** 2;
+        if (dist < bestDist) { bestDist = dist; bestX = x; bestY = y; }
+      });
+    }
+    return bestX !== null ? { x: bestX, y: bestY } : { x: allMaxX + GAP, y: allCY - gH / 2 };
+  }
+
+  const anchor = findGroupAnchor(groupW, groupH);
+
+  // 先清除目前選取狀態
+  if (selectedUid !== null) {
+    const prevDiv = document.getElementById(`mod-${selectedUid}`);
+    if (prevDiv) prevDiv.classList.remove('selected');
+    const prevRow = document.getElementById(`row-${selectedUid}`);
+    if (prevRow) prevRow.style.background = '';
+    selectedUid = null;
+  }
+  selectedUids.forEach(uid => {
+    const div = document.getElementById(`mod-${uid}`);
+    if (div) { div.classList.remove('selected'); div.classList.remove('multi-selected'); }
+    const row = document.getElementById(`row-${uid}`);
+    if (row) { row.style.background = ''; row.classList.remove('multi-selected-row'); }
+  });
+  selectedUids.clear();
+
+  // 建立副本：以群組錨點 + 各模塊相對偏移還原相對位置
+  const newUids = [];
+  const baseTime = Date.now();
+  // gid 對照表：原 gid → 新 gid（同群組三件共用一個新 gid）
+  const gidMap = {};
+  targets.forEach((mod, i) => {
+    if (mod.gid && !gidMap[mod.gid]) gidMap[mod.gid] = baseTime + i * 7 + Math.floor(Math.random() * 1000) + 9999;
+  });
+  targets.forEach((mod, i) => {
+    const newUid = baseTime + i * 7 + Math.floor(Math.random() * 100);
+    const copy = {
+      uid:       newUid,
+      id:        mod.id,
+      name:      mod.name,
+      width:     mod.width,
+      height:    mod.height,
+      spec:      mod.spec,
+      x:          anchor.x + (mod.x - minX),
+      y:          anchor.y + (mod.y - minY),
+      rotate:     mod.rotate || 0,
+      note:       mod.note,
+      acrylicQty: 0,
+      heightCustomizable: mod.heightCustomizable || false,
+      customHeight: mod.customHeight,
+      panelHeights: mod.panelHeights ? mod.panelHeights.map(p => typeof p === 'object' ? { ...p } : { h: p, color: '#ffffff', opacity: 1 }) : undefined,
+      widthCustomizable: mod.widthCustomizable || false,
+      customWidth: mod.customWidth,
+      useEdge: mod.useEdge !== undefined ? mod.useEdge : true,
+      edgeColor: mod.edgeColor !== undefined ? mod.edgeColor : undefined,
+      gid: mod.gid ? gidMap[mod.gid] : undefined,
+    };
+    modules.push(copy);
+    renderModuleDOM(copy);
+    newUids.push(newUid);
+  });
+
+  // 選取所有新副本（群組選取）
+  if (newUids.length === 1) {
+    selectModule(newUids[0]);
+  } else {
+    newUids.forEach(uid => {
+      selectedUids.add(uid);
+      const div = document.getElementById(`mod-${uid}`);
+      if (div) div.classList.add('multi-selected');
+    });
+  }
+
+  renderTable();
+  updateEmptyHint();
+  showToast(`已複製 ${targets.length} 個模塊`);
+}
+
+// ==========================================
+// 多選模式切換（iPad 專用）
+// ==========================================
+function toggleMultiSelectMode() {
+  multiSelectMode = !multiSelectMode;
+  const btn = document.getElementById('multiselect-mode-btn');
+  if (multiSelectMode) {
+    btn.textContent = '☑ 多選模式：開啟';
+    btn.classList.add('multiselect-active');
+    showToast('多選模式已開啟，點擊模塊可累積加選');
+  } else {
+    btn.textContent = '☑ 多選模式：關閉';
+    btn.classList.remove('multiselect-active');
+    clearMultiSelection();
+    selectedUid = null;
+    showToast('多選模式已關閉');
+  }
+}
+
+// ==========================================
+// 任務二：Panel 抽屜開關（小螢幕專用）
+// ==========================================
+function openPanelDrawer() {
+  document.getElementById('panel').classList.add('panel-open');
+  document.getElementById('panel-overlay').classList.add('overlay-show');
+  document.body.style.overflow = 'hidden'; // 防止背景捲動
+}
+
+function closePanelDrawer() {
+  document.getElementById('panel').classList.remove('panel-open');
+  document.getElementById('panel-overlay').classList.remove('overlay-show');
+  document.body.style.overflow = '';
+}
+
+// ==========================================
+// 8. 輔助工具 (吐司訊息通知)
+// ==========================================
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => {
+    toast.classList.remove('show');
+  }, 2500);
+}
+</script>
+
+</body>
+</html>

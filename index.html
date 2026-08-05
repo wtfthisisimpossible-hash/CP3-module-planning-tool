@@ -735,7 +735,8 @@ tr.multi-selected-row td {
 
 /* 彈出色盤容器 */
 .color-popup {
-  position: fixed;
+  position: absolute;
+  top: 100%; left: 0;
   margin-top: 4px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -747,6 +748,13 @@ tr.multi-selected-row td {
   z-index: 9000;
   box-shadow: var(--shadow-md);
   min-width: 110px;
+}
+/* 空間不足時往上展開 */
+.color-popup.open-upward {
+  top: auto;
+  bottom: 100%;
+  margin-top: 0;
+  margin-bottom: 4px;
 }
 .color-select.open .color-popup { display: flex; }
 
@@ -1283,6 +1291,20 @@ function appendHslPicker(popup, uid, idx, initHex, onApply) {
       updateHslSliderGradients(panel, h2, s2, l2);
       updateHslPreview(panel, h2, s2, l2);
     }
+    // HSL 展開/收合後，重新判斷往上或往下展開
+    requestAnimationFrame(() => {
+      const popupEl    = toggleBtn.closest('.color-popup');
+      const selectEl   = toggleBtn.closest('.color-select');
+      if (!popupEl || !selectEl) return;
+      const selectRect = selectEl.getBoundingClientRect();
+      const ph         = popupEl.offsetHeight || 90;
+      const spaceBelow = window.innerHeight - selectRect.bottom;
+      if (spaceBelow < ph + 8) {
+        popupEl.classList.add('open-upward');
+      } else {
+        popupEl.classList.remove('open-upward');
+      }
+    });
   });
 
   popup.appendChild(toggleBtn);
@@ -1377,7 +1399,17 @@ function buildPostColorCell(mod) {
     if (!target) return;
     const isOpen = target.classList.contains('open');
     closeAllColorPopups();
-    if (!isOpen) target.classList.add('open');
+    if (!isOpen) {
+      target.classList.add('open');
+      const pp = target.querySelector('.color-popup');
+      if (pp) {
+        pp.classList.remove('open-upward');
+        const r = target.getBoundingClientRect();
+        if (window.innerHeight - r.bottom < 108) pp.classList.add('open-upward');
+      }
+      const listArea = document.querySelector('.list-area');
+      if (listArea) listArea.style.overflow = 'visible';
+    }
   });
 
   const popup = document.createElement('div');
@@ -1443,7 +1475,17 @@ function buildEdgeColorCell(mod) {
     if (!target) return;
     const isOpen = target.classList.contains('open');
     closeAllColorPopups();
-    if (!isOpen) target.classList.add('open');
+    if (!isOpen) {
+      target.classList.add('open');
+      const pp = target.querySelector('.color-popup');
+      if (pp) {
+        pp.classList.remove('open-upward');
+        const r = target.getBoundingClientRect();
+        if (window.innerHeight - r.bottom < 108) pp.classList.add('open-upward');
+      }
+      const listArea = document.querySelector('.list-area');
+      if (listArea) listArea.style.overflow = 'visible';
+    }
   });
 
   const popup = document.createElement('div');
@@ -1528,14 +1570,20 @@ function toggleColorPopup(uid, idx) {
   closeAllColorPopups();
   if (!isOpen) {
     target.classList.add('open');
-    // position:fixed 需手動對齊觸發按鈕
-    const btn = target.querySelector('.color-swatch-btn');
+    // 判斷下方空間是否足夠，不足則往上展開（open-upward）
     const popup = target.querySelector('.color-popup');
-    if (btn && popup) {
-      const rect = btn.getBoundingClientRect();
-      popup.style.top  = (rect.bottom + 4) + 'px';
-      popup.style.left = rect.left + 'px';
+    if (popup) {
+      popup.classList.remove('open-upward');
+      const rect = target.getBoundingClientRect();
+      const estimatedH = 100; // 色票列基本高度（HSL 收合時）
+      const spaceBelow = window.innerHeight - rect.bottom;
+      if (spaceBelow < estimatedH + 8) {
+        popup.classList.add('open-upward');
+      }
     }
+    // 讓 .list-area 暫時 overflow: visible，使 popup 能溢出捲動容器
+    const listArea = document.querySelector('.list-area');
+    if (listArea) listArea.style.overflow = 'visible';
   }
 }
 
@@ -1548,6 +1596,9 @@ function closeAllColorPopups() {
     if (tb && tb.classList.contains('hsl-toggle-btn'))
       tb.textContent = '＋ 自訂色（HSL）';
   });
+  // 還原 .list-area 的 overflow（popup 關閉後）
+  const listArea = document.querySelector('.list-area');
+  if (listArea) listArea.style.overflow = '';
 }
 
 // ==========================================

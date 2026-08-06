@@ -4823,7 +4823,7 @@ function renderTable() {
 
           // ── ＋ 按鈕列 ──
           const ctrlWrap = document.createElement('div');
-          ctrlWrap.style.cssText = 'display:flex;align-items:center;gap:6px;margin-top:2px;';
+          ctrlWrap.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:4px;';
 
           const btnPlus = document.createElement('button');
           btnPlus.textContent = '＋ 增加面板';
@@ -4858,7 +4858,7 @@ function renderTable() {
           });
 
           ctrlWrap.appendChild(btnPlus);
-          panelBody.appendChild(ctrlWrap);
+          panelBody.insertBefore(ctrlWrap, panelBody.firstChild);
           tdSpec.appendChild(panelBody);
 
           // 面板高度變更後，同步 group row 型號欄的收邊條型號

@@ -735,9 +735,7 @@ tr.multi-selected-row td {
 
 /* 彈出色盤容器 */
 .color-popup {
-  position: absolute;
-  top: 100%; left: 0;
-  margin-top: 4px;
+  position: fixed;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -748,13 +746,6 @@ tr.multi-selected-row td {
   z-index: 9000;
   box-shadow: var(--shadow-md);
   min-width: 110px;
-}
-/* 空間不足時往上展開 */
-.color-popup.open-upward {
-  top: auto;
-  bottom: 100%;
-  margin-top: 0;
-  margin-bottom: 4px;
 }
 .color-select.open .color-popup { display: flex; }
 
@@ -1291,19 +1282,13 @@ function appendHslPicker(popup, uid, idx, initHex, onApply) {
       updateHslSliderGradients(panel, h2, s2, l2);
       updateHslPreview(panel, h2, s2, l2);
     }
-    // HSL 展開/收合後，重新判斷往上或往下展開
+    // HSL 展開/收合後，重新校正 popup 位置
     requestAnimationFrame(() => {
-      const popupEl    = toggleBtn.closest('.color-popup');
-      const selectEl   = toggleBtn.closest('.color-select');
+      const popupEl = toggleBtn.closest('.color-popup');
+      const selectEl = toggleBtn.closest('.color-select');
       if (!popupEl || !selectEl) return;
-      const selectRect = selectEl.getBoundingClientRect();
-      const ph         = popupEl.offsetHeight || 90;
-      const spaceBelow = window.innerHeight - selectRect.bottom;
-      if (spaceBelow < ph + 8) {
-        popupEl.classList.add('open-upward');
-      } else {
-        popupEl.classList.remove('open-upward');
-      }
+      const triggerBtn = selectEl.querySelector('.color-swatch-btn') || selectEl;
+      positionColorPopup(popupEl, triggerBtn);
     });
   });
 
@@ -1403,12 +1388,13 @@ function buildPostColorCell(mod) {
       target.classList.add('open');
       const pp = target.querySelector('.color-popup');
       if (pp) {
-        pp.classList.remove('open-upward');
-        const r = target.getBoundingClientRect();
-        if (window.innerHeight - r.bottom < 108) pp.classList.add('open-upward');
+        // 移到 body 避免 overflow 容器截斷 pointer-events
+        pp._returnTo = pp.parentElement;
+        pp._returnBefore = pp.nextSibling;
+        document.body.appendChild(pp);
+        pp.style.display = 'flex';
+        positionColorPopup(pp, btn);
       }
-      const listArea = document.querySelector('.list-area');
-      if (listArea) listArea.style.overflow = 'visible';
     }
   });
 
@@ -1479,12 +1465,12 @@ function buildEdgeColorCell(mod) {
       target.classList.add('open');
       const pp = target.querySelector('.color-popup');
       if (pp) {
-        pp.classList.remove('open-upward');
-        const r = target.getBoundingClientRect();
-        if (window.innerHeight - r.bottom < 108) pp.classList.add('open-upward');
+        pp._returnTo = pp.parentElement;
+        pp._returnBefore = pp.nextSibling;
+        document.body.appendChild(pp);
+        pp.style.display = 'flex';
+        positionColorPopup(pp, btn);
       }
-      const listArea = document.querySelector('.list-area');
-      if (listArea) listArea.style.overflow = 'visible';
     }
   });
 
@@ -1562,6 +1548,23 @@ function setPanelColor(uid, idx, color, opacity) {
   closeAllColorPopups();
 }
 
+/* 共用：將 popup 定位至 triggerEl 下方（或上方），使用 position:fixed 不受 overflow 限制 */
+function positionColorPopup(popup, triggerEl) {
+  const pw = popup.offsetWidth  || 120;
+  const ph = popup.offsetHeight || 90;
+
+  const rect = triggerEl.getBoundingClientRect();
+  let left = rect.left;
+  if (left + pw > window.innerWidth - 8) left = rect.right - pw;
+  if (left < 8) left = 8;
+  let top = rect.bottom + 4;
+  if (top + ph > window.innerHeight - 8) top = rect.top - ph - 4;
+  if (top < 8) top = 8;
+
+  popup.style.top  = top  + 'px';
+  popup.style.left = left + 'px';
+}
+
 /* 切換指定面板的選色 popup 開關 */
 function toggleColorPopup(uid, idx) {
   const target = document.getElementById(`colorSelect-${idx}-${uid}`);
@@ -1570,20 +1573,8 @@ function toggleColorPopup(uid, idx) {
   closeAllColorPopups();
   if (!isOpen) {
     target.classList.add('open');
-    // 判斷下方空間是否足夠，不足則往上展開（open-upward）
     const popup = target.querySelector('.color-popup');
-    if (popup) {
-      popup.classList.remove('open-upward');
-      const rect = target.getBoundingClientRect();
-      const estimatedH = 100; // 色票列基本高度（HSL 收合時）
-      const spaceBelow = window.innerHeight - rect.bottom;
-      if (spaceBelow < estimatedH + 8) {
-        popup.classList.add('open-upward');
-      }
-    }
-    // 讓 .list-area 暫時 overflow: visible，使 popup 能溢出捲動容器
-    const listArea = document.querySelector('.list-area');
-    if (listArea) listArea.style.overflow = 'visible';
+    if (popup) positionColorPopup(popup, target.querySelector('.color-swatch-btn') || target);
   }
 }
 
@@ -1596,9 +1587,20 @@ function closeAllColorPopups() {
     if (tb && tb.classList.contains('hsl-toggle-btn'))
       tb.textContent = '＋ 自訂色（HSL）';
   });
-  // 還原 .list-area 的 overflow（popup 關閉後）
-  const listArea = document.querySelector('.list-area');
-  if (listArea) listArea.style.overflow = '';
+  // 歸還暫時移到 body 的 popup
+  document.querySelectorAll('body > .color-popup').forEach(pp => {
+    pp.style.display = 'none';
+    if (pp._returnTo) {
+      if (pp._returnBefore && pp._returnBefore.parentElement === pp._returnTo) {
+        pp._returnTo.insertBefore(pp, pp._returnBefore);
+      } else {
+        pp._returnTo.appendChild(pp);
+      }
+      pp._bodyMounted = false;
+      pp._returnTo = null;
+      pp._returnBefore = null;
+    }
+  });
 }
 
 // ==========================================
@@ -4472,7 +4474,7 @@ function renderTable() {
 
           // ── panelBody：收合/展開區域 ──
           const panelBody = document.createElement('div');
-          panelBody.style.cssText = mod._panelExpanded ? 'display:block;min-width:0;overflow:hidden;' : 'display:none;';
+          panelBody.style.cssText = mod._panelExpanded ? 'display:block;min-width:0;overflow:visible;' : 'display:none;';
 
           // ── 拖曳排序狀態 ──
           let dragSrcIdx = null;
@@ -4487,7 +4489,7 @@ function renderTable() {
               border:1px solid var(--border);border-radius:6px;
               background:var(--surface-2);
               transition:opacity 0.15s;
-              min-width:0;overflow:hidden;
+              min-width:0;overflow:visible;
             `;
 
             // dragover：顯示插入線（上／下方 border highlight）
